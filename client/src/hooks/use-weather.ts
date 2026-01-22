@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import type { TimezoneKey } from "@shared/schema";
 
 interface WeatherData {
   celsius: number;
   fahrenheit: number;
 }
 
-export function useWeather(zoneKey: TimezoneKey | undefined) {
+export function useWeather(zoneKey: string | undefined) {
   return useQuery<WeatherData>({
     queryKey: ["/api/weather", zoneKey],
     queryFn: async () => {

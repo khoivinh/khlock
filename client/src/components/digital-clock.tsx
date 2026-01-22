@@ -1,11 +1,13 @@
-import { useState, useMemo } from "react";
-import { GripVertical, X, Search } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { GripVertical, X, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MeetingPlannerModal } from "@/components/meeting-planner-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ALL_TIMEZONES, AVAILABLE_ZONES, type TimezoneKey } from "@shared/schema";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { ALL_CITIES, getCityByKey, searchCities, type TimezoneOption } from "@/lib/city-lookup";
 import { useWeather, getTemperatureColor } from "@/hooks/use-weather";
 
 interface DigitalClockProps {
@@ -15,90 +17,93 @@ interface DigitalClockProps {
   isHero?: boolean;
   showSeconds?: boolean;
   isSelectable?: boolean;
-  selectedZoneKey?: TimezoneKey;
-  onZoneChange?: (zoneKey: TimezoneKey) => void;
-  otherZoneKeys?: TimezoneKey[];
+  selectedZoneKey?: string;
+  onZoneChange?: (zoneKey: string) => void;
+  otherZoneKeys?: string[];
   isNew?: boolean;
   isDraggable?: boolean;
   isBeingDragged?: boolean;
   layout?: "grid" | "list";
-  zoneKey?: TimezoneKey;
-  onTimeUpdate?: (zoneKey: TimezoneKey, hours: number, minutes: number) => void;
+  zoneKey?: string;
+  onTimeUpdate?: (zoneKey: string, hours: number, minutes: number) => void;
   onRemove?: () => void;
   isDragActive?: boolean;
 }
 
 function CitySelector({ 
-  selectedZoneKey, 
-  onZoneChange, 
+  selectedCityKey, 
+  onCityChange, 
   onOpenChange 
 }: { 
-  selectedZoneKey: TimezoneKey;
-  onZoneChange: (zoneKey: TimezoneKey) => void;
+  selectedCityKey: string;
+  onCityChange: (cityKey: string) => void;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
-  const filteredTimezones = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    
-    if (!query) {
-      // No search - show AVAILABLE_ZONES sorted by offset
-      return AVAILABLE_ZONES
-        .map(key => [key, ALL_TIMEZONES[key]] as [string, typeof ALL_TIMEZONES[TimezoneKey]])
-        .sort((a, b) => b[1].offset - a[1].offset);
-    }
-    
-    // With search - filter ALL_TIMEZONES
-    return Object.entries(ALL_TIMEZONES)
-      .filter(([key, tz]) => 
-        tz.name.toLowerCase().includes(query) || 
-        tz.gmtLabel.toLowerCase().includes(query) ||
-        key.toLowerCase().includes(query)
-      )
-      .sort((a, b) => b[1].offset - a[1].offset);
-  }, [searchQuery]);
+  const selectedCity = getCityByKey(selectedCityKey);
+  const filteredCities = searchCities(searchValue, 100);
 
   return (
-    <Select 
-      value={selectedZoneKey} 
-      onValueChange={(val) => {
-        onZoneChange(val as TimezoneKey);
-        setSearchQuery("");
-      }} 
-      onOpenChange={(open) => {
-        onOpenChange(open);
-        if (!open) setSearchQuery("");
+    <Popover 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        onOpenChange(isOpen);
+        if (!isOpen) setSearchValue("");
       }}
     >
-      <SelectTrigger className="w-fit h-auto p-0 border-0 bg-transparent text-sm font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground focus:ring-0 focus:ring-offset-0 gap-1">
-        <SelectValue>{ALL_TIMEZONES[selectedZoneKey]?.name}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        <div className="flex items-center gap-2 px-2 pb-2 sticky top-0 bg-popover">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search cities..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 text-sm"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+      <PopoverTrigger asChild>
+        <button
+          className="flex items-center gap-1 text-sm font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+          data-testid="button-city-selector"
+        >
+          {selectedCity?.name || "Select city"}
+          <ChevronsUpDown className="h-3 w-3 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder="Search cities..." 
+            value={searchValue}
+            onValueChange={setSearchValue}
             data-testid="input-city-search"
           />
-        </div>
-        {filteredTimezones.map(([key, tz]) => (
-          <SelectItem key={key} value={key}>
-            {tz.name} ({tz.gmtLabel})
-          </SelectItem>
-        ))}
-        {filteredTimezones.length === 0 && (
-          <div className="py-2 px-4 text-sm text-muted-foreground">
-            No cities found
-          </div>
-        )}
-      </SelectContent>
-    </Select>
+          <CommandList>
+            <CommandEmpty>No cities found.</CommandEmpty>
+            <CommandGroup>
+              {filteredCities.map((city) => (
+                <CommandItem
+                  key={city.key}
+                  value={city.key}
+                  onSelect={() => {
+                    onCityChange(city.key);
+                    setOpen(false);
+                    setSearchValue("");
+                  }}
+                  data-testid={`city-option-${city.key}`}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedCityKey === city.key ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex flex-col">
+                    <span>{city.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {city.country} ({city.gmtLabel})
+                    </span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -229,8 +234,8 @@ export function DigitalClock({
           <div className="w-32">
             {isSelectable && selectedZoneKey && onZoneChange ? (
               <CitySelector 
-                selectedZoneKey={selectedZoneKey} 
-                onZoneChange={onZoneChange}
+                selectedCityKey={selectedZoneKey} 
+                onCityChange={onZoneChange}
                 onOpenChange={setIsDropdownOpen}
               />
             ) : (
@@ -339,8 +344,8 @@ export function DigitalClock({
       <div className="pl-6">
         {isSelectable && selectedZoneKey && onZoneChange ? (
           <CitySelector 
-            selectedZoneKey={selectedZoneKey} 
-            onZoneChange={onZoneChange}
+            selectedCityKey={selectedZoneKey} 
+            onCityChange={onZoneChange}
             onOpenChange={setIsDropdownOpen}
           />
         ) : (

@@ -2,23 +2,25 @@ import { useState, useEffect } from "react";
 import { CalendarClock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { ALL_TIMEZONES, type TimezoneKey } from "@shared/schema";
+import { getCityByKey } from "@/lib/city-lookup";
 
 interface MeetingPlannerModalProps {
-  hostZoneKey: TimezoneKey;
-  otherZoneKeys: TimezoneKey[];
+  hostZoneKey: string;
+  otherZoneKeys: string[];
 }
 
 export function MeetingPlannerModal({ hostZoneKey, otherZoneKeys }: MeetingPlannerModalProps) {
   const [meetingDate, setMeetingDate] = useState("");
   const [meetingTime, setMeetingTime] = useState("");
 
-  const hostZone = ALL_TIMEZONES[hostZoneKey];
+  const hostCity = getCityByKey(hostZoneKey);
 
   useEffect(() => {
+    if (!hostCity) return;
+    
     const now = new Date();
     const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
-    const hostTime = new Date(utcTime + hostZone.offset * 3600000);
+    const hostTime = new Date(utcTime + hostCity.offset * 3600000);
 
     let defaultDate = hostTime;
     if (hostTime.getHours() >= 18) {
@@ -30,13 +32,15 @@ export function MeetingPlannerModal({ hostZoneKey, otherZoneKeys }: MeetingPlann
     const day = defaultDate.getDate().toString().padStart(2, "0");
 
     setMeetingDate(`${year}-${month}-${day}`);
-  }, [hostZone.offset]);
+  }, [hostCity?.offset]);
 
-  function getMeetingTimeInZone(targetZoneKey: TimezoneKey): { time: string; hour: number } | null {
-    if (!meetingDate || !meetingTime) return null;
+  function getMeetingTimeInZone(targetZoneKey: string): { time: string; hour: number } | null {
+    if (!meetingDate || !meetingTime || !hostCity) return null;
 
-    const targetZone = ALL_TIMEZONES[targetZoneKey];
-    const offsetDiff = targetZone.offset - hostZone.offset;
+    const targetCity = getCityByKey(targetZoneKey);
+    if (!targetCity) return null;
+    
+    const offsetDiff = targetCity.offset - hostCity.offset;
 
     const meetingDateTime = new Date(`${meetingDate}T${meetingTime}:00`);
     const targetDateTime = new Date(meetingDateTime.getTime() + offsetDiff * 3600000);
@@ -74,6 +78,8 @@ export function MeetingPlannerModal({ hostZoneKey, otherZoneKeys }: MeetingPlann
     }
   }
 
+  if (!hostCity) return null;
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -99,7 +105,7 @@ export function MeetingPlannerModal({ hostZoneKey, otherZoneKeys }: MeetingPlann
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Planning meeting from</p>
             <p className="font-display font-semibold text-lg">
-              {hostZone.name} ({hostZone.gmtLabel})
+              {hostCity.name} ({hostCity.gmtLabel})
             </p>
           </div>
 
@@ -129,10 +135,10 @@ export function MeetingPlannerModal({ hostZoneKey, otherZoneKeys }: MeetingPlann
               <p className="text-sm text-muted-foreground">Meeting times for others</p>
 
               {otherZoneKeys.map((zoneKey) => {
-                const zone = ALL_TIMEZONES[zoneKey];
+                const city = getCityByKey(zoneKey);
                 const meetingInfo = getMeetingTimeInZone(zoneKey);
 
-                if (!meetingInfo) return null;
+                if (!meetingInfo || !city) return null;
 
                 const status = getTimeStatus(meetingInfo.hour);
 
@@ -148,8 +154,8 @@ export function MeetingPlannerModal({ hostZoneKey, otherZoneKeys }: MeetingPlann
                         title={getStatusLabel(status)} 
                       />
                       <div>
-                        <p className="font-medium">{zone.name}</p>
-                        <p className="text-xs text-muted-foreground">{zone.gmtLabel}</p>
+                        <p className="font-medium">{city.name}</p>
+                        <p className="text-xs text-muted-foreground">{city.gmtLabel}</p>
                       </div>
                     </div>
                     <div className="text-right">

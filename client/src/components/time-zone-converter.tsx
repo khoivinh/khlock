@@ -1,8 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { LayoutGrid, List, Search, Plus } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { LayoutGrid, List, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DigitalClock } from "@/components/digital-clock";
 import {
   DndContext,
@@ -25,32 +23,29 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { 
-  ALL_TIMEZONES, 
-  AVAILABLE_ZONES, 
-  detectLocalTimezone, 
-  getTimeInZone,
-  type TimezoneKey 
-} from "@shared/schema";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { ALL_CITIES, getCityByKey, searchCities, getTimeInCityZone } from "@/lib/city-lookup";
 
 interface TimeZoneConverterProps {
   isCustomMode: boolean;
   selectedTime: Date | null;
-  onTimeUpdate: (zoneKey: TimezoneKey, hours: number, minutes: number) => void;
+  onTimeUpdate: (zoneKey: string, hours: number, minutes: number) => void;
 }
 
 interface SortableClockItemProps {
-  id: TimezoneKey;
-  zoneKey: TimezoneKey;
+  id: string;
+  zoneKey: string;
   index: number;
   baseTime: Date;
   layout: "grid" | "list";
   isNew: boolean;
-  onZoneChange: (index: number, zoneKey: TimezoneKey) => void;
-  otherZoneKeys: TimezoneKey[];
-  onTimeUpdate: (zoneKey: TimezoneKey, hours: number, minutes: number) => void;
-  onRemove: (zoneKey: TimezoneKey) => void;
-  allZones: TimezoneKey[];
+  onZoneChange: (index: number, zoneKey: string) => void;
+  otherZoneKeys: string[];
+  onTimeUpdate: (zoneKey: string, hours: number, minutes: number) => void;
+  onRemove: (zoneKey: string) => void;
+  allZones: string[];
   isDragActive: boolean;
 }
 
@@ -85,11 +80,11 @@ function SortableClockItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const tz = ALL_TIMEZONES[zoneKey];
+  const city = getCityByKey(zoneKey);
 
   // Calculate indicator position based on drag direction
-  const activeIndex = active ? allZones.indexOf(active.id as TimezoneKey) : -1;
-  const overIndex = over ? allZones.indexOf(over.id as TimezoneKey) : -1;
+  const activeIndex = active ? allZones.indexOf(active.id as string) : -1;
+  const overIndex = over ? allZones.indexOf(over.id as string) : -1;
   const isBeingHoveredOver = over?.id === id && active?.id !== id;
   
   // Show indicator on the side where the item will be inserted
@@ -121,9 +116,9 @@ function SortableClockItem({
       )}
 
       <DigitalClock
-        time={getTimeInZone(baseTime, tz.offset)}
-        cityName={tz.name}
-        timezone={tz.gmtLabel}
+        time={city ? getTimeInCityZone(baseTime, city.offset) : baseTime}
+        cityName={city?.name || zoneKey}
+        timezone={city?.gmtLabel || ""}
         isSelectable
         selectedZoneKey={zoneKey}
         onZoneChange={(newZone) => onZoneChange(index, newZone)}
@@ -144,22 +139,67 @@ function SortableClockItem({
 const MAX_CLOCKS = 12;
 const STORAGE_KEY = "world-clock-zones";
 
+function detectLocalCity(): string {
+  try {
+    const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const match = ALL_CITIES.find(c => c.timezone === localTz);
+    return match?.key || "london_GB";
+  } catch {
+    return "london_GB";
+  }
+}
+
+// Migration: convert old city keys to new format with country code
+function migrateOldKeys(keys: string[]): string[] {
+  const oldToNew: Record<string, string> = {
+    "paris": "paris_FR",
+    "newYork": "newYork_US",
+    "losAngeles": "losAngeles_US",
+    "london": "london_GB",
+    "tokyo": "tokyo_JP",
+    "sydney": "sydney_AU",
+    "dubai": "dubai_AE",
+    "singapore": "singapore_SG",
+    "hongKong": "hongKong_HK",
+    "berlin": "berlin_DE",
+    "moscow": "moscow_RU",
+    "mumbai": "mumbai_IN",
+    "shanghai": "shanghai_CN",
+    "beijing": "beijing_CN",
+    "seoul": "seoul_KR",
+    "bangkok": "bangkok_TH",
+    "cairo": "cairo_EG",
+    "istanbul": "istanbul_TR",
+  };
+  
+  return keys.map(key => {
+    // If already in new format (contains underscore), keep as is
+    if (key.includes("_")) return key;
+    // If old format, migrate to new
+    return oldToNew[key] || key;
+  }).filter(key => getCityByKey(key) !== undefined);
+}
+
+const DEFAULT_ZONES = ["paris_FR", "newYork_US", "losAngeles_US"];
+
 export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: TimeZoneConverterProps) {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [selectedZones, setSelectedZones] = useState<TimezoneKey[]>(() => {
+  const [selectedZones, setSelectedZones] = useState<string[]>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        const migrated = migrateOldKeys(parsed);
+        return migrated.length > 0 ? migrated : DEFAULT_ZONES;
       } catch {
-        return ["paris", "newYork", "losAngeles"];
+        return DEFAULT_ZONES;
       }
     }
-    return ["paris", "newYork", "losAngeles"];
+    return DEFAULT_ZONES;
   });
-  const [heroZone, setHeroZone] = useState<TimezoneKey>("london");
-  const [newlyAddedZone, setNewlyAddedZone] = useState<TimezoneKey | null>(null);
-  const [activeId, setActiveId] = useState<TimezoneKey | null>(null);
+  const [heroZone, setHeroZone] = useState<string>("london_GB");
+  const [newlyAddedZone, setNewlyAddedZone] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
 
   const sensors = useSensors(
@@ -174,8 +214,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
   );
 
   useEffect(() => {
-    const localZone = detectLocalTimezone();
-    setHeroZone(localZone);
+    const localCity = detectLocalCity();
+    setHeroZone(localCity);
   }, []);
 
   useEffect(() => {
@@ -194,7 +234,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
     return () => clearInterval(interval);
   }, [isCustomMode]);
 
-  const handleZoneChange = useCallback((index: number, zoneKey: TimezoneKey) => {
+  const handleZoneChange = useCallback((index: number, zoneKey: string) => {
     setSelectedZones((prev) => {
       const newZones = [...prev];
       newZones[index] = zoneKey;
@@ -202,7 +242,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
     });
   }, []);
 
-  const handleAddClock = useCallback((zoneKey: TimezoneKey) => {
+  const handleAddClock = useCallback((zoneKey: string) => {
     if (selectedZones.length >= MAX_CLOCKS) return;
     if (selectedZones.includes(zoneKey)) return;
 
@@ -214,38 +254,20 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
     }, 1500);
   }, [selectedZones]);
 
-  const handleRemoveClock = useCallback((zoneKey: TimezoneKey) => {
+  const handleRemoveClock = useCallback((zoneKey: string) => {
     setSelectedZones((prev) => prev.filter((z) => z !== zoneKey));
   }, []);
 
+  const [addZoneOpen, setAddZoneOpen] = useState(false);
   const [addZoneSearchQuery, setAddZoneSearchQuery] = useState("");
   
-  const filteredZonesToAdd = useMemo(() => {
-    const query = addZoneSearchQuery.toLowerCase().trim();
-    
-    if (!query) {
-      // No search - show AVAILABLE_ZONES not already selected
-      return AVAILABLE_ZONES
-        .filter((zone) => !selectedZones.includes(zone))
-        .map(key => [key, ALL_TIMEZONES[key]] as [TimezoneKey, typeof ALL_TIMEZONES[TimezoneKey]])
-        .sort((a, b) => b[1].offset - a[1].offset);
-    }
-    
-    // With search - filter ALL_TIMEZONES (excluding already selected)
-    return (Object.entries(ALL_TIMEZONES) as [TimezoneKey, typeof ALL_TIMEZONES[TimezoneKey]][])
-      .filter(([key, tz]) => 
-        !selectedZones.includes(key) &&
-        (tz.name.toLowerCase().includes(query) || 
-         tz.gmtLabel.toLowerCase().includes(query) ||
-         key.toLowerCase().includes(query))
-      )
-      .sort((a, b) => b[1].offset - a[1].offset);
-  }, [addZoneSearchQuery, selectedZones]);
+  const filteredCitiesToAdd = searchCities(addZoneSearchQuery, 100)
+    .filter((city) => !selectedZones.includes(city.key));
 
   const canAddMoreZones = selectedZones.length < MAX_CLOCKS;
 
   function handleDragStart(event: DragStartEvent) {
-    setActiveId(event.active.id as TimezoneKey);
+    setActiveId(event.active.id as string);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -255,8 +277,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
 
     if (over && active.id !== over.id) {
       setSelectedZones((items) => {
-        const oldIndex = items.indexOf(active.id as TimezoneKey);
-        const newIndex = items.indexOf(over.id as TimezoneKey);
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
         return arrayMove(items, oldIndex, newIndex);
       });
     }
@@ -274,42 +296,40 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
     return new Date(now.getTime() + now.getTimezoneOffset() * 60000);
   }
 
-  function getOtherZoneKeys(currentIndex: number): TimezoneKey[] {
+  function getOtherZoneKeys(currentIndex: number): string[] {
     return selectedZones.filter((_, index) => index !== currentIndex);
   }
 
   if (!currentTime && !isCustomMode) {
-    const heroTz = ALL_TIMEZONES[heroZone];
+    const heroCity = getCityByKey(heroZone);
     return (
       <div className="space-y-16">
         <section>
           <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-            {heroTz.name}
+            {heroCity?.name || heroZone}
           </p>
           <p className="mt-1 font-display text-6xl font-black tracking-tight text-foreground md:text-8xl">
             --:--:--
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">{heroTz.gmtLabel}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{heroCity?.gmtLabel}</p>
         </section>
 
         <section className="border-t border-border pt-12">
           <div className="mb-8">
-            <Button variant="ghost" size="icon" disabled className="h-8 w-8 rounded-full border border-border">
-              <Plus className="h-4 w-4" />
-            </Button>
+            <span className="text-sm text-muted-foreground">Loading...</span>
           </div>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {selectedZones.map((zoneKey) => {
-              const tz = ALL_TIMEZONES[zoneKey];
+              const city = getCityByKey(zoneKey);
               return (
                 <div key={zoneKey}>
                   <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                    {tz.name}
+                    {city?.name || zoneKey}
                   </p>
                   <p className="mt-1 font-display text-3xl font-black tracking-tight text-foreground md:text-4xl">
                     --:--
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{tz.label}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{city?.gmtLabel}</p>
                 </div>
               );
             })}
@@ -320,16 +340,16 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
   }
 
   const baseTime = getBaseTime();
-  const heroTimezone = ALL_TIMEZONES[heroZone];
-  const activeZone = activeId ? ALL_TIMEZONES[activeId] : null;
+  const heroCity = getCityByKey(heroZone);
+  const activeCity = activeId ? getCityByKey(activeId) : null;
 
   return (
     <div className="space-y-16">
       <section>
         <DigitalClock
-          time={getTimeInZone(baseTime, heroTimezone.offset)}
-          cityName={heroTimezone.name}
-          timezone={heroTimezone.gmtLabel}
+          time={heroCity ? getTimeInCityZone(baseTime, heroCity.offset) : baseTime}
+          cityName={heroCity?.name || heroZone}
+          timezone={heroCity?.gmtLabel || ""}
           isHero
           showSeconds={!isCustomMode}
           zoneKey={heroZone}
@@ -340,46 +360,55 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
       <section className="border-t border-border pt-6">
         <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-2">
-            <Select 
-              value="" 
-              onValueChange={(val) => {
-                handleAddClock(val as TimezoneKey);
-                setAddZoneSearchQuery("");
-              }}
-              onOpenChange={(open) => { if (!open) setAddZoneSearchQuery(""); }}
-              disabled={!canAddMoreZones}
-            >
-              <SelectTrigger 
-                className="w-fit h-auto p-0 border-0 bg-transparent text-sm font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground focus:ring-0 focus:ring-offset-0 gap-1"
-                data-testid="button-add-timezone"
-              >
-                <SelectValue placeholder="Add Time Zone" />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="flex items-center gap-2 px-2 pb-2 sticky top-0 bg-popover">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search cities..."
+            <Popover open={addZoneOpen} onOpenChange={(open) => {
+              setAddZoneOpen(open);
+              if (!open) setAddZoneSearchQuery("");
+            }}>
+              <PopoverTrigger asChild>
+                <button
+                  className="flex items-center gap-1 text-sm font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors focus:outline-none disabled:opacity-50"
+                  disabled={!canAddMoreZones}
+                  data-testid="button-add-timezone"
+                >
+                  Add Time Zone
+                  <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[280px] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput 
+                    placeholder="Search cities..." 
                     value={addZoneSearchQuery}
-                    onChange={(e) => setAddZoneSearchQuery(e.target.value)}
-                    className="h-8 text-sm"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
+                    onValueChange={setAddZoneSearchQuery}
                     data-testid="input-add-zone-search"
                   />
-                </div>
-                {filteredZonesToAdd.map(([zoneKey, tz]) => (
-                  <SelectItem key={zoneKey} value={zoneKey} data-testid={`menu-item-${zoneKey}`}>
-                    {tz.name} ({tz.gmtLabel})
-                  </SelectItem>
-                ))}
-                {filteredZonesToAdd.length === 0 && (
-                  <div className="py-2 px-4 text-sm text-muted-foreground">
-                    No cities found
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
+                  <CommandList>
+                    <CommandEmpty>No cities found.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredCitiesToAdd.map((city) => (
+                        <CommandItem
+                          key={city.key}
+                          value={city.key}
+                          onSelect={() => {
+                            handleAddClock(city.key);
+                            setAddZoneOpen(false);
+                            setAddZoneSearchQuery("");
+                          }}
+                          data-testid={`menu-item-${city.key}`}
+                        >
+                          <div className="flex flex-col">
+                            <span>{city.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {city.country} ({city.gmtLabel})
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="flex items-center gap-2">
@@ -440,12 +469,12 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
           </SortableContext>
 
           <DragOverlay>
-            {activeId && activeZone ? (
+            {activeId && activeCity ? (
               <div className="opacity-90 shadow-xl">
                 <DigitalClock
-                  time={getTimeInZone(baseTime, activeZone.offset)}
-                  cityName={activeZone.name}
-                  timezone={activeZone.gmtLabel}
+                  time={getTimeInCityZone(baseTime, activeCity.offset)}
+                  cityName={activeCity.name}
+                  timezone={activeCity.gmtLabel}
                   isSelectable={false}
                   isDraggable
                   isBeingDragged

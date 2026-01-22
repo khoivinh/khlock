@@ -29,7 +29,10 @@ Preferred communication style: Simple, everyday language.
 - **Current Implementation**: Browser localStorage for persisting user timezone preferences
 - **Database Config**: Drizzle ORM configured with PostgreSQL (schema defined in shared/schema.ts, though not actively used for this client-side app)
 - **Schema Design**: Timezone data validated using Zod schemas with predefined available timezones
-- **City Database**: 80+ major world cities across all continents with searchable dropdowns
+- **City Database**: Uses city-timezones npm package with 1500+ most populous cities worldwide
+  - City keys use format: cityName_countryISO2 (e.g., "paris_FR", "austin_US", "sanJose_CR")
+  - Client-side city-lookup.ts provides searchCities(), getCityByKey(), ALL_CITIES array
+  - Server weather API uses matching key generation for correct coordinates
 
 ### Project Structure
 ```

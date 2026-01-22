@@ -29,6 +29,7 @@ Preferred communication style: Simple, everyday language.
 - **Current Implementation**: Browser localStorage for persisting user timezone preferences
 - **Database Config**: Drizzle ORM configured with PostgreSQL (schema defined in shared/schema.ts, though not actively used for this client-side app)
 - **Schema Design**: Timezone data validated using Zod schemas with predefined available timezones
+- **City Database**: 80+ major world cities across all continents with searchable dropdowns
 
 ### Project Structure
 ```

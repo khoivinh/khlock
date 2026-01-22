@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GripVertical } from "lucide-react";
+import { GripVertical, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ interface DigitalClockProps {
   layout?: "grid" | "list";
   zoneKey?: TimezoneKey;
   onTimeUpdate?: (zoneKey: TimezoneKey, hours: number, minutes: number) => void;
+  onRemove?: () => void;
+  isDragActive?: boolean;
 }
 
 function CitySelector({ 
@@ -74,6 +76,8 @@ export function DigitalClock({
   layout = "grid",
   zoneKey,
   onTimeUpdate,
+  onRemove,
+  isDragActive = false,
 }: DigitalClockProps) {
   const hours = time.getHours().toString().padStart(2, "0");
   const minutes = time.getMinutes().toString().padStart(2, "0");
@@ -166,8 +170,9 @@ export function DigitalClock({
   if (layout === "list") {
     return (
       <div
-        className={`relative rounded-lg p-4 -m-4 transition-all duration-300 ease-out 
-        ${isEditing ? "bg-muted shadow-lg ring-2 ring-primary/20" : isDropdownOpen ? "bg-muted shadow-lg" : "hover:bg-muted hover:shadow-lg"}
+        className={`relative rounded-lg p-4 -m-4 
+        ${isDragActive ? "transition-none" : "transition-all duration-300 ease-out"}
+        ${isEditing ? "bg-muted shadow-lg ring-2 ring-primary/20" : isDropdownOpen ? "bg-muted shadow-lg" : isDragActive ? "shadow-none bg-transparent" : "hover:bg-muted hover:shadow-lg"}
         ${isNew ? "animate-highlight-yellow" : ""}
         ${isBeingDragged ? "bg-yellow-200 dark:bg-yellow-800/50 shadow-lg" : ""}`}
         data-testid={`clock-tile-${selectedZoneKey}`}
@@ -207,7 +212,7 @@ export function DigitalClock({
             </div>
           ) : (
             <p
-              className="font-display text-6xl font-black tracking-tight text-foreground cursor-pointer hover:text-primary transition-colors"
+              className={`font-display text-6xl font-black tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "hover:text-primary"}`}
               onClick={handleTimeClick}
               title="Click to edit time"
             >
@@ -224,11 +229,26 @@ export function DigitalClock({
             )}
           </p>
 
-          {selectedZoneKey && otherZoneKeys.length > 0 && (
-            <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {selectedZoneKey && otherZoneKeys.length > 0 && (
               <MeetingPlannerModal hostZoneKey={selectedZoneKey} otherZoneKeys={otherZoneKeys} />
-            </div>
-          )}
+            )}
+            {onRemove && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                title="Remove clock"
+                data-testid={`button-remove-${selectedZoneKey}`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -237,13 +257,16 @@ export function DigitalClock({
   // Grid layout
   return (
     <div
-      className={`relative rounded-lg p-4 -m-4 mr-4 transition-all duration-300 ease-out 
+      className={`relative rounded-lg p-4 -m-4 mr-4 
+      ${isDragActive ? "transition-none" : "transition-all duration-300 ease-out"}
       ${
         isEditing
           ? "bg-muted shadow-lg ring-2 ring-primary/20"
           : isDropdownOpen
             ? "scale-110 bg-muted shadow-lg -translate-y-1"
-            : "hover:scale-110 hover:bg-muted hover:shadow-lg hover:-translate-y-1"
+            : isDragActive
+              ? "scale-100 translate-y-0 shadow-none bg-transparent" // Force reset any hover states during drag
+              : "hover:scale-110 hover:bg-muted hover:shadow-lg hover:-translate-y-1"
       }
       ${isNew ? "animate-highlight-yellow" : ""}
       ${isBeingDragged ? "bg-yellow-200 dark:bg-yellow-800/50 shadow-lg scale-105" : ""}`}
@@ -255,11 +278,26 @@ export function DigitalClock({
         </div>
       )}
 
-      {selectedZoneKey && otherZoneKeys.length > 0 && (
-        <div className="absolute top-4 right-2">
+      <div className="absolute top-4 right-2 flex flex-col gap-1">
+        {selectedZoneKey && otherZoneKeys.length > 0 && (
           <MeetingPlannerModal hostZoneKey={selectedZoneKey} otherZoneKeys={otherZoneKeys} />
-        </div>
-      )}
+        )}
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            title="Remove clock"
+            data-testid={`button-remove-${selectedZoneKey}`}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
       <div className="pl-6">
         {isSelectable && selectedZoneKey && onZoneChange ? (
@@ -294,7 +332,7 @@ export function DigitalClock({
           </div>
         ) : (
           <p
-            className="mt-1 font-display text-3xl font-black tracking-tight text-foreground md:text-4xl cursor-pointer hover:text-primary transition-colors"
+            className={`mt-1 font-display text-3xl font-black tracking-tight text-foreground md:text-4xl cursor-pointer transition-colors ${isDragActive ? "" : "hover:text-primary"}`}
             onClick={handleTimeClick}
             title="Click to edit time"
           >

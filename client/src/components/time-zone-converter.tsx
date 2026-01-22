@@ -25,7 +25,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  horizontalListSortingStrategy,
+  rectSortingStrategy,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -53,6 +53,9 @@ interface SortableClockItemProps {
   onZoneChange: (index: number, zoneKey: TimezoneKey) => void;
   otherZoneKeys: TimezoneKey[];
   onTimeUpdate: (zoneKey: TimezoneKey, hours: number, minutes: number) => void;
+  onRemove: (zoneKey: TimezoneKey) => void;
+  allZones: TimezoneKey[];
+  isDragActive: boolean;
 }
 
 function SortableClockItem({
@@ -65,6 +68,9 @@ function SortableClockItem({
   onZoneChange,
   otherZoneKeys,
   onTimeUpdate,
+  onRemove,
+  allZones,
+  isDragActive,
 }: SortableClockItemProps) {
   const {
     attributes,
@@ -73,7 +79,6 @@ function SortableClockItem({
     transform,
     transition,
     isDragging,
-    isOver,
     active,
     over,
   } = useSortable({ id });
@@ -86,9 +91,14 @@ function SortableClockItem({
 
   const tz = ALL_TIMEZONES[zoneKey];
 
-  const showLeftIndicator = over?.id === id && active?.id !== id && 
-    active && over && String(active.id) !== String(over.id);
-  const showRightIndicator = false;
+  // Calculate indicator position based on drag direction
+  const activeIndex = active ? allZones.indexOf(active.id as TimezoneKey) : -1;
+  const overIndex = over ? allZones.indexOf(over.id as TimezoneKey) : -1;
+  const isBeingHoveredOver = over?.id === id && active?.id !== id;
+  
+  // Show indicator on the side where the item will be inserted
+  const showBeforeIndicator = isBeingHoveredOver && activeIndex > overIndex;
+  const showAfterIndicator = isBeingHoveredOver && activeIndex < overIndex;
 
   return (
     <div
@@ -99,14 +109,14 @@ function SortableClockItem({
       className={`relative cursor-grab active:cursor-grabbing touch-none`}
       data-testid={`draggable-zone-${zoneKey}`}
     >
-      {showLeftIndicator && (
+      {showBeforeIndicator && (
         layout === "grid" ? (
           <div className="absolute -left-4 top-0 bottom-0 w-1 bg-primary rounded-full" />
         ) : (
           <div className="absolute -top-2 left-0 right-0 h-1 bg-primary rounded-full" />
         )
       )}
-      {showRightIndicator && (
+      {showAfterIndicator && (
         layout === "grid" ? (
           <div className="absolute -right-4 top-0 bottom-0 w-1 bg-primary rounded-full" />
         ) : (
@@ -128,6 +138,8 @@ function SortableClockItem({
         layout={layout}
         zoneKey={zoneKey}
         onTimeUpdate={onTimeUpdate}
+        onRemove={() => onRemove(zoneKey)}
+        isDragActive={isDragActive}
       />
     </div>
   );
@@ -205,6 +217,10 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
       setNewlyAddedZone(null);
     }, 1500);
   }, [selectedZones]);
+
+  const handleRemoveClock = useCallback((zoneKey: TimezoneKey) => {
+    setSelectedZones((prev) => prev.filter((z) => z !== zoneKey));
+  }, []);
 
   const availableZonesToAdd = AVAILABLE_ZONES.filter((zone) => !selectedZones.includes(zone));
 
@@ -369,7 +385,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
         >
           <SortableContext 
             items={selectedZones} 
-            strategy={layout === "grid" ? horizontalListSortingStrategy : verticalListSortingStrategy}
+            strategy={layout === "grid" ? rectSortingStrategy : verticalListSortingStrategy}
           >
             <div className={layout === "grid" ? "grid grid-cols-1 gap-8 md:grid-cols-3" : "flex flex-col gap-4"}>
               {selectedZones.map((zoneKey, index) => (
@@ -384,6 +400,9 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
                   onZoneChange={handleZoneChange}
                   otherZoneKeys={getOtherZoneKeys(index)}
                   onTimeUpdate={onTimeUpdate}
+                  onRemove={handleRemoveClock}
+                  allZones={selectedZones}
+                  isDragActive={activeId !== null}
                 />
               ))}
             </div>

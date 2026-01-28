@@ -7,6 +7,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -97,7 +98,7 @@ function SortableClockItem({
       style={style}
       {...attributes}
       {...listeners}
-      className={`relative cursor-grab active:cursor-grabbing touch-none`}
+      className={`relative cursor-grab active:cursor-grabbing touch-manipulation`}
       data-testid={`draggable-zone-${zoneKey}`}
     >
       {showBeforeIndicator && (
@@ -202,10 +203,18 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
 
+  // Mobile-optimized sensors: use TouchSensor with delay for mobile to prevent
+  // accidental drags while scrolling, and PointerSensor for desktop
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 10, // Slightly larger distance for desktop
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms hold before drag starts on mobile
+        tolerance: 8, // Allow 8px movement during delay without canceling
       },
     }),
     useSensor(KeyboardSensor, {
@@ -374,7 +383,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
                   <ChevronsUpDown className="h-3 w-3 opacity-50" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-[280px] p-0" align="start">
+              <PopoverContent className="w-[280px] p-0" align="start" collisionPadding={20}>
                 <Command shouldFilter={false}>
                   <CommandInput 
                     placeholder="Search cities..." 

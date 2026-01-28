@@ -56,14 +56,14 @@ function CitySelector({
     >
       <PopoverTrigger asChild>
         <button
-          className="flex items-center gap-1 text-sm font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+          className="flex items-center gap-1 text-sm font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors focus:outline-none min-h-[44px] touch-manipulation"
           data-testid="button-city-selector"
         >
           {selectedCity?.name || "Select city"}
           <ChevronsUpDown className="h-3 w-3 opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start">
+      <PopoverContent className="w-[280px] p-0" align="start" collisionPadding={20}>
         <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Search cities..." 
@@ -284,8 +284,8 @@ export function DigitalClock({
           {onRemove && (
             <Button
               variant="ghost"
-              size="sm"
-              className="ml-auto h-7 w-7 p-0 text-muted-foreground/50 hover:text-destructive"
+              size="icon"
+              className="ml-auto min-h-[44px] min-w-[44px] text-muted-foreground/50 hover:text-destructive touch-manipulation"
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove();
@@ -328,8 +328,8 @@ export function DigitalClock({
       {onRemove && (
         <Button
           variant="ghost"
-          size="sm"
-          className="absolute top-4 right-2 h-7 w-7 p-0 text-muted-foreground/50 hover:text-destructive"
+          size="icon"
+          className="absolute top-2 right-0 min-h-[44px] min-w-[44px] text-muted-foreground/50 hover:text-destructive touch-manipulation"
           onClick={(e) => {
             e.stopPropagation();
             onRemove();

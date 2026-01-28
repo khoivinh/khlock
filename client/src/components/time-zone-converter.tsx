@@ -203,7 +203,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
 
-  // Mobile-optimized sensors: use TouchSensor with delay for mobile to prevent
+  // Mobile-optimized sensors: use TouchSensor with longer delay for mobile to prevent
   // accidental drags while scrolling, and PointerSensor for desktop
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -213,8 +213,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200, // 200ms hold before drag starts on mobile
-        tolerance: 8, // Allow 8px movement during delay without canceling
+        delay: 350, // 350ms hold before drag starts on mobile
+        tolerance: 15, // Allow 15px movement during delay without canceling
       },
     }),
     useSensor(KeyboardSensor, {
@@ -420,7 +420,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
             </Popover>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* View toggle hidden on mobile - grid view adapts responsively */}
+          <div className="hidden md:flex items-center gap-2">
             <span className="text-sm uppercase text-muted-foreground">View</span>
             <Button
               variant={layout === "grid" ? "default" : "ghost"}

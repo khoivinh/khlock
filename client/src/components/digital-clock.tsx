@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { GripVertical, X, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ interface DigitalClockProps {
   onTimeUpdate?: (zoneKey: string, hours: number, minutes: number) => void;
   onRemove?: () => void;
   isDragActive?: boolean;
+  dragHandleListeners?: Record<string, unknown>;
 }
 
 function CitySelector({ 
@@ -125,6 +126,7 @@ export function DigitalClock({
   onTimeUpdate,
   onRemove,
   isDragActive = false,
+  dragHandleListeners,
 }: DigitalClockProps) {
   const hours = time.getHours().toString().padStart(2, "0");
   const minutes = time.getMinutes().toString().padStart(2, "0");
@@ -226,8 +228,12 @@ export function DigitalClock({
       >
         <div className="flex items-start gap-6 py-10">
           {isDraggable && (
-            <div className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-              <GripVertical className="h-4 w-4" />
+            <div
+              className="flex items-center justify-center min-h-[44px] min-w-[44px] -ml-2 text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing touch-none"
+              {...(dragHandleListeners as React.HTMLAttributes<HTMLDivElement>)}
+              title="Drag to reorder"
+            >
+              <GripVertical className="h-5 w-5" />
             </div>
           )}
 
@@ -320,7 +326,11 @@ export function DigitalClock({
       data-testid={`clock-tile-${selectedZoneKey}`}
     >
       {isDraggable && (
-        <div className="absolute top-4 left-2 text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+        <div
+          className="absolute top-0 left-0 flex items-center justify-center h-11 w-11 text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing touch-none"
+          {...(dragHandleListeners as React.HTMLAttributes<HTMLDivElement>)}
+          title="Drag to reorder"
+        >
           <GripVertical className="h-4 w-4" />
         </div>
       )}

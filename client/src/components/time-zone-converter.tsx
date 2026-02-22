@@ -26,7 +26,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
 import { ALL_CITIES, getCityByKey, searchCities, getTimeInCityZone } from "@/lib/city-lookup";
 
 interface TimeZoneConverterProps {
@@ -83,22 +82,20 @@ function SortableClockItem({
 
   const city = getCityByKey(zoneKey);
 
-  // Calculate indicator position based on drag direction
   const activeIndex = active ? allZones.indexOf(active.id as string) : -1;
   const overIndex = over ? allZones.indexOf(over.id as string) : -1;
   const isBeingHoveredOver = over?.id === id && active?.id !== id;
-  
-  // Show indicator on the side where the item will be inserted
+
   const showBeforeIndicator = isBeingHoveredOver && activeIndex > overIndex;
   const showAfterIndicator = isBeingHoveredOver && activeIndex < overIndex;
 
   return (
+    // listeners removed from here — moved to the grip handle inside DigitalClock
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className={`relative cursor-grab active:cursor-grabbing touch-manipulation`}
+      className="relative"
       data-testid={`draggable-zone-${zoneKey}`}
     >
       {showBeforeIndicator && (
@@ -132,6 +129,7 @@ function SortableClockItem({
         onTimeUpdate={onTimeUpdate}
         onRemove={() => onRemove(zoneKey)}
         isDragActive={isDragActive}
+        dragHandleListeners={listeners}
       />
     </div>
   );
@@ -150,7 +148,6 @@ function detectLocalCity(): string {
   }
 }
 
-// Migration: convert old city keys to new format with country code
 function migrateOldKeys(keys: string[]): string[] {
   const oldToNew: Record<string, string> = {
     "paris": "paris_FR",
@@ -172,11 +169,9 @@ function migrateOldKeys(keys: string[]): string[] {
     "cairo": "cairo_EG",
     "istanbul": "istanbul_TR",
   };
-  
+
   return keys.map(key => {
-    // If already in new format (contains underscore), keep as is
     if (key.includes("_")) return key;
-    // If old format, migrate to new
     return oldToNew[key] || key;
   }).filter(key => getCityByKey(key) !== undefined);
 }
@@ -203,18 +198,16 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
 
-  // Mobile-optimized sensors: use TouchSensor with longer delay for mobile to prevent
-  // accidental drags while scrolling, and PointerSensor for desktop
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 10, // Slightly larger distance for desktop
+        distance: 8,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 350, // 350ms hold before drag starts on mobile
-        tolerance: 15, // Allow 15px movement during delay without canceling
+        delay: 150,
+        tolerance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -269,7 +262,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
 
   const [addZoneOpen, setAddZoneOpen] = useState(false);
   const [addZoneSearchQuery, setAddZoneSearchQuery] = useState("");
-  
+
   const filteredCitiesToAdd = searchCities(addZoneSearchQuery, 100)
     .filter((city) => !selectedZones.includes(city.key));
 
@@ -277,12 +270,17 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
+    // Prevent page scroll fighting the drag gesture on mobile
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    
+
     setActiveId(null);
+    document.body.style.overflow = "";
+    document.body.style.touchAction = "";
 
     if (over && active.id !== over.id) {
       setSelectedZones((items) => {
@@ -295,13 +293,14 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
 
   function handleDragCancel(_event: DragCancelEvent) {
     setActiveId(null);
+    document.body.style.overflow = "";
+    document.body.style.touchAction = "";
   }
 
   function getBaseTime(): Date {
     if (isCustomMode && selectedTime) {
       return selectedTime;
     }
-    // Return the current time directly - getTimeInCityZone handles timezone conversion
     return currentTime || new Date();
   }
 
@@ -385,8 +384,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
               </PopoverTrigger>
               <PopoverContent className="w-[280px] p-0" align="start" collisionPadding={20}>
                 <Command shouldFilter={false}>
-                  <CommandInput 
-                    placeholder="Search cities..." 
+                  <CommandInput
+                    placeholder="Search cities..."
                     value={addZoneSearchQuery}
                     onValueChange={setAddZoneSearchQuery}
                     data-testid="input-add-zone-search"
@@ -420,7 +419,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
             </Popover>
           </div>
 
-          {/* View toggle hidden on mobile - grid view adapts responsively */}
+          {/* View toggle hidden on mobile */}
           <div className="hidden md:flex items-center gap-2">
             <span className="text-sm uppercase text-muted-foreground">View</span>
             <Button
@@ -453,8 +452,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <SortableContext 
-            items={selectedZones} 
+          <SortableContext
+            items={selectedZones}
             strategy={layout === "grid" ? rectSortingStrategy : verticalListSortingStrategy}
           >
             <div className={layout === "grid" ? "grid grid-cols-1 gap-8 md:grid-cols-3" : "flex flex-col gap-4"}>

@@ -329,7 +329,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
           <div className="mb-8">
             <span className="text-sm text-muted-foreground">Loading...</span>
           </div>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 sm:gap-8">
             {selectedZones.map((zoneKey) => {
               const city = getCityByKey(zoneKey);
               return (
@@ -459,7 +459,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate }: 
             items={selectedZones}
             strategy={layout === "grid" ? rectSortingStrategy : verticalListSortingStrategy}
           >
-            <div className={layout === "grid" ? "grid grid-cols-1 gap-8 md:grid-cols-3" : "flex flex-col gap-4"}>
+            <div className={layout === "grid" ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 sm:gap-8" : "flex flex-col gap-4"}>
               {selectedZones.map((zoneKey, index) => (
                 <SortableClockItem
                   key={zoneKey}

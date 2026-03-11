@@ -221,7 +221,7 @@ export function DigitalClock({
       <div
         className={`relative rounded-lg p-4 -m-4
         ${isDragActive ? "transition-none" : "transition-[background-color,box-shadow,opacity] duration-300 ease-out"}
-        ${isEditing ? "bg-muted shadow-lg ring-2 ring-primary/20" : isDropdownOpen ? "bg-muted shadow-lg" : isDragActive ? "shadow-none bg-transparent" : "hover:bg-muted hover:shadow-lg"}
+        ${isEditing ? "bg-muted shadow-lg ring-2 ring-primary/20" : isDropdownOpen ? "bg-muted shadow-lg" : isDragActive ? "shadow-none bg-transparent" : "[@media(hover:hover)]:hover:bg-muted [@media(hover:hover)]:hover:shadow-lg"}
         ${isNew ? "animate-highlight-yellow" : ""}
         ${isBeingDragged ? "bg-yellow-200 dark:bg-yellow-800/50 shadow-lg" : ""}`}
         data-testid={`clock-tile-${selectedZoneKey}`}
@@ -266,7 +266,7 @@ export function DigitalClock({
           ) : (
             <div className="flex items-center gap-3">
               <p
-                className={`font-display text-6xl font-black tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "hover:text-primary"}`}
+                className={`font-display text-6xl font-black tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "[@media(hover:hover)]:hover:text-primary"}`}
                 onClick={handleTimeClick}
                 title="Click to edit time"
               >
@@ -310,62 +310,68 @@ export function DigitalClock({
   // Grid layout
   return (
     <div
-      className={`relative rounded-lg p-4 -m-4 mr-4
+      className={`relative rounded-lg p-4 -m-4
       ${isDragActive ? "transition-none" : "transition-[background-color,box-shadow,opacity,transform] duration-300 ease-out"}
       ${
         isEditing
           ? "bg-muted shadow-lg ring-2 ring-primary/20"
           : isDropdownOpen
-            ? "[@media(hover:hover)]:scale-110 bg-muted shadow-lg [@media(hover:hover)]:-translate-y-1"
+            ? "[@media(hover:hover)]:scale-105 bg-muted shadow-lg [@media(hover:hover)]:-translate-y-1"
             : isDragActive
-              ? "scale-100 translate-y-0 shadow-none bg-transparent" // Force reset any hover states during drag
-              : "[@media(hover:hover)]:hover:scale-110 hover:bg-muted hover:shadow-lg [@media(hover:hover)]:hover:-translate-y-1"
+              ? "scale-100 translate-y-0 shadow-none bg-transparent"
+              : "[@media(hover:hover)]:hover:scale-105 [@media(hover:hover)]:hover:-translate-y-1 hover:bg-muted hover:shadow-lg"
       }
       ${isNew ? "animate-highlight-yellow" : ""}
       ${isBeingDragged ? "bg-yellow-200 dark:bg-yellow-800/50 shadow-lg scale-105" : ""}`}
       data-testid={`clock-tile-${selectedZoneKey}`}
     >
-      {isDraggable && (
-        <div
-          className="absolute top-0 left-0 flex items-center justify-center h-11 w-11 text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing touch-none"
-          {...(dragHandleListeners as React.HTMLAttributes<HTMLDivElement>)}
-          title="Drag to reorder"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
-      )}
-
-      {onRemove && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-0 min-h-[44px] min-w-[44px] text-muted-foreground/50 hover:text-destructive touch-manipulation"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          title="Remove clock"
-          data-testid={`button-remove-${selectedZoneKey}`}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      )}
-
-      <div className="pl-6">
-        {isSelectable && selectedZoneKey && onZoneChange ? (
-          <CitySelector 
-            selectedCityKey={selectedZoneKey} 
-            onCityChange={onZoneChange}
-            onOpenChange={setIsDropdownOpen}
-          />
-        ) : (
-          <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-            {cityName}
-          </p>
+      {/* Top row: grab handle, city name, remove button — vertically aligned */}
+      <div className="flex items-center gap-1 mb-1">
+        {isDraggable && (
+          <div
+            className="flex items-center justify-center h-8 w-8 -ml-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing touch-none"
+            {...(dragHandleListeners as React.HTMLAttributes<HTMLDivElement>)}
+            title="Drag to reorder"
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
         )}
 
+        <div className="flex-1 min-w-0">
+          {isSelectable && selectedZoneKey && onZoneChange ? (
+            <CitySelector
+              selectedCityKey={selectedZoneKey}
+              onCityChange={onZoneChange}
+              onOpenChange={setIsDropdownOpen}
+            />
+          ) : (
+            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              {cityName}
+            </p>
+          )}
+        </div>
+
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 -mr-1 text-muted-foreground/50 hover:text-destructive touch-manipulation"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            title="Remove clock"
+            data-testid={`button-remove-${selectedZoneKey}`}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* Time and timezone info */}
+      <div className={isDraggable ? "pl-7" : ""}>
         {isEditing ? (
-          <div className="mt-2 space-y-3 pb-2">
+          <div className="mt-1 space-y-3 pb-2">
             <Input
               type="time"
               value={editTime}
@@ -385,7 +391,7 @@ export function DigitalClock({
         ) : (
           <div className="mt-1 flex items-center gap-2">
             <p
-              className={`font-display text-3xl font-black tracking-tight text-foreground md:text-4xl cursor-pointer transition-colors ${isDragActive ? "" : "hover:text-primary"}`}
+              className={`font-display text-3xl font-black tracking-tight text-foreground md:text-4xl cursor-pointer transition-colors ${isDragActive ? "" : "[@media(hover:hover)]:hover:text-primary"}`}
               onClick={handleTimeClick}
               title="Click to edit time"
             >

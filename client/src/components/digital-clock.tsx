@@ -325,11 +325,11 @@ export function DigitalClock({
       ${isBeingDragged ? "bg-yellow-200 dark:bg-yellow-800/50 shadow-lg scale-105" : ""}`}
       data-testid={`clock-tile-${selectedZoneKey}`}
     >
-      {/* Top row: grab handle, city name, remove button — vertically aligned */}
-      <div className="flex items-center gap-1 mb-1">
+      <div className="flex items-center gap-2">
+        {/* Drag handle */}
         {isDraggable && (
           <div
-            className="flex items-center justify-center h-8 w-8 -ml-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing touch-none"
+            className="flex-shrink-0 flex items-center justify-center h-8 w-8 -ml-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing touch-none"
             {...(dragHandleListeners as React.HTMLAttributes<HTMLDivElement>)}
             title="Drag to reorder"
           >
@@ -337,6 +337,7 @@ export function DigitalClock({
           </div>
         )}
 
+        {/* City name + timezone (left side) */}
         <div className="flex-1 min-w-0">
           {isSelectable && selectedZoneKey && onZoneChange ? (
             <CitySelector
@@ -349,13 +350,52 @@ export function DigitalClock({
               {cityName}
             </p>
           )}
+          <p className="mt-0.5 text-xs text-muted-foreground sm:hidden">
+            {timezone}
+            {weather && (
+              <span className={`ml-2 ${getTemperatureColor(weather.celsius)}`}>
+                {weather.fahrenheit}°F
+              </span>
+            )}
+          </p>
         </div>
 
+        {/* Time (right side on mobile, below on desktop) */}
+        {isEditing ? (
+          <div className="flex items-center gap-2 sm:hidden">
+            <Input
+              type="time"
+              value={editTime}
+              onChange={(e) => setEditTime(e.target.value)}
+              className="font-display text-xl font-black h-10 px-2 w-28"
+              autoFocus
+            />
+            <Button size="sm" onClick={handleUpdateClick}>OK</Button>
+            <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 sm:hidden">
+            <p
+              className={`font-display text-2xl font-black tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "[@media(hover:hover)]:hover:text-primary"}`}
+              onClick={handleTimeClick}
+              title="Click to edit time"
+            >
+              {timeString}
+            </p>
+            {selectedZoneKey && otherZoneKeys.length > 0 && (
+              <MeetingPlannerModal hostZoneKey={selectedZoneKey} otherZoneKeys={otherZoneKeys} />
+            )}
+          </div>
+        )}
+
+        {/* Remove button */}
         {onRemove && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 -mr-1 text-muted-foreground/50 hover:text-destructive touch-manipulation"
+            className="flex-shrink-0 h-8 w-8 -mr-1 text-muted-foreground/50 hover:text-destructive touch-manipulation"
             onClick={(e) => {
               e.stopPropagation();
               onRemove();
@@ -368,8 +408,8 @@ export function DigitalClock({
         )}
       </div>
 
-      {/* Time and timezone info */}
-      <div className={isDraggable ? "pl-7" : ""}>
+      {/* Desktop: time and timezone below the top row */}
+      <div className="hidden sm:block pl-7">
         {isEditing ? (
           <div className="mt-1 space-y-3 pb-2">
             <Input

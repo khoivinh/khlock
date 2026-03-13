@@ -68,7 +68,7 @@ export default function WorldClock() {
             className="font-display font-black tracking-tight text-foreground text-5xl"
             data-testid="text-app-title"
           >
-            World Khlock
+            Khlock
           </h1>
 
           {isCustomMode && (

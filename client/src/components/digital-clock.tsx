@@ -219,11 +219,18 @@ export function DigitalClock({
   if (layout === "list") {
     return (
       <div
-        className={`relative rounded-lg p-4 -m-4
+        className={`relative rounded-[15px] p-4 -m-4
         ${isDragActive ? "transition-none" : "transition-[background-color,box-shadow,opacity] duration-300 ease-out"}
-        ${isEditing ? "bg-muted shadow-lg ring-2 ring-primary/20" : isDropdownOpen ? "bg-muted shadow-lg" : isDragActive ? "shadow-none bg-transparent" : "[@media(hover:hover)]:hover:bg-muted [@media(hover:hover)]:hover:shadow-lg"}
-        ${isNew ? "animate-highlight-yellow" : ""}
-        ${isBeingDragged ? "bg-yellow-200 dark:bg-yellow-800/50 shadow-lg" : ""}`}
+        ${
+          isBeingDragged
+            ? "bg-[#fdf19d] dark:bg-[#4a4020] border border-[#ffedbd] dark:border-[#5c4f2a] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            : isEditing || isDropdownOpen
+              ? "bg-[#fdf7ca] dark:bg-[#3d3520] border border-[#ffedbd] dark:border-[#5c4f2a]"
+              : isDragActive
+                ? "shadow-none bg-transparent"
+                : "[@media(hover:hover)]:hover:bg-[#f0f0f0] [@media(hover:hover)]:dark:hover:bg-[#2a2a2a]"
+        }
+        ${isNew ? "animate-highlight-yellow" : ""}`}
         data-testid={`clock-tile-${selectedZoneKey}`}
       >
         <div className="flex items-start gap-6 py-10">
@@ -310,19 +317,18 @@ export function DigitalClock({
   // Grid layout
   return (
     <div
-      className={`relative rounded-[15px] px-2.5 py-[15px] sm:rounded-lg sm:p-4 sm:-m-4
-      ${isDragActive ? "transition-none" : "transition-[background-color,box-shadow,opacity,transform] duration-300 ease-out"}
+      className={`relative rounded-[15px] px-2.5 pt-[15px] pb-5
+      ${isDragActive ? "transition-none" : "transition-[background-color,box-shadow] duration-300 ease-out"}
       ${
-        isEditing
-          ? "bg-muted shadow-lg ring-2 ring-primary/20"
-          : isDropdownOpen
-            ? "[@media(hover:hover)]:scale-105 bg-muted shadow-lg [@media(hover:hover)]:-translate-y-1"
+        isBeingDragged
+          ? "bg-[#fdf19d] dark:bg-[#4a4020] border border-[#ffedbd] dark:border-[#5c4f2a] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          : isEditing || isDropdownOpen
+            ? "bg-[#fdf7ca] dark:bg-[#3d3520] border border-[#ffedbd] dark:border-[#5c4f2a]"
             : isDragActive
-              ? "scale-100 translate-y-0 shadow-none bg-transparent"
-              : "[@media(hover:hover)]:hover:scale-105 [@media(hover:hover)]:hover:-translate-y-1 hover:bg-muted hover:shadow-lg"
+              ? "shadow-none bg-transparent"
+              : "[@media(hover:hover)]:hover:bg-[#f0f0f0] [@media(hover:hover)]:dark:hover:bg-[#2a2a2a]"
       }
-      ${isNew ? "animate-highlight-yellow" : ""}
-      ${isBeingDragged ? "bg-yellow-200 dark:bg-yellow-800/50 shadow-lg scale-105" : ""}`}
+      ${isNew ? "animate-highlight-yellow" : ""}`}
       data-testid={`clock-tile-${selectedZoneKey}`}
     >
       <div className="flex items-start gap-2">
@@ -409,7 +415,7 @@ export function DigitalClock({
       </div>
 
       {/* Desktop: time and timezone below the top row */}
-      <div className="hidden sm:block pl-7">
+      <div className="hidden sm:block pl-7 -ml-4">
         {isEditing ? (
           <div className="mt-1 space-y-3 pb-2">
             <Input

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GripVertical, MoreHorizontal, Check, ChevronsUpDown } from "lucide-react";
+import { GripVertical, X, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -8,6 +8,24 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from "@/lib/utils";
 import { ALL_CITIES, getCityByKey, searchCities, type TimezoneOption } from "@/lib/city-lookup";
 import { useWeather, getTemperatureColor } from "@/hooks/use-weather";
+
+function EllipsisCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="17"
+      height="17"
+      viewBox="0 0 17 17"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle cx="8.5" cy="8.5" r="7.5" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="4.75" cy="8.5" r="1.1" fill="currentColor" />
+      <circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" />
+      <circle cx="12.25" cy="8.5" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
 
 interface DigitalClockProps {
   time: Date;
@@ -191,7 +209,7 @@ export function DigitalClock({
 
   if (isHero) {
     return (
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between px-[10px]">
         <div className="flex-1 min-w-0">
           <p
             className="text-sm font-medium uppercase tracking-wide text-muted-foreground"
@@ -324,7 +342,7 @@ export function DigitalClock({
             />
             <Button size="sm" onClick={handleUpdateClick}>OK</Button>
             <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-              <MoreHorizontal className="h-3 w-3" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
         ) : (
@@ -350,7 +368,7 @@ export function DigitalClock({
             title="Options"
             data-testid={`button-remove-${selectedZoneKey}`}
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <EllipsisCircleIcon />
           </button>
         )}
       </div>

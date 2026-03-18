@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, startTransition } from "react";
+import { useState, useEffect, useCallback, useRef, startTransition } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { DigitalClock } from "@/components/digital-clock";
 import {
@@ -22,7 +22,6 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ALL_CITIES, getCityByKey, searchCities, getTimeInCityZone } from "@/lib/city-lookup";
 
@@ -72,7 +71,7 @@ function SortableClockItem({
   } = useSortable({ id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
@@ -248,6 +247,20 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
 
   const [addZoneOpen, setAddZoneOpen] = useState(false);
   const [addZoneSearchQuery, setAddZoneSearchQuery] = useState("");
+  const addZoneRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!addZoneOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (addZoneRef.current && !addZoneRef.current.contains(e.target as Node)) {
+        setAddZoneOpen(false);
+        setAddZoneSearchQuery("");
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [addZoneOpen]);
 
   const allFilteredCities = searchCities(addZoneSearchQuery, 100);
   const alreadyDisplayedCities = allFilteredCities.filter((city) => selectedZones.includes(city.key));
@@ -355,66 +368,60 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
       </section>
 
       <section className="border-t border-border pt-[25px] sm:pt-6">
-        <div className="mb-[25px] sm:mb-8 relative">
-          <div className="flex items-center gap-2">
-            <Popover open={addZoneOpen} onOpenChange={(open) => {
-              setAddZoneOpen(open);
-              if (!open) setAddZoneSearchQuery("");
-            }}>
-              <PopoverTrigger asChild>
-                <button
-                  className="flex items-center gap-1 text-sm font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors focus:outline-none disabled:opacity-50"
-                  disabled={!canAddMoreZones}
-                  data-testid="button-add-timezone"
-                >
-                  Add Time Zone
-                  <ChevronsUpDown className="h-3 w-3 opacity-50" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-[var(--radix-popover-trigger-width)] min-w-[280px] p-0 sm:w-[var(--radix-popover-content-available-width)]"
-                align="start"
-                collisionPadding={20}
-                sideOffset={8}
-                style={{ maxWidth: "calc(100vw - 48px)" }}
-              >
-                <Command shouldFilter={false}>
-                  <CommandInput
-                    placeholder="Search cities..."
-                    value={addZoneSearchQuery}
-                    onValueChange={setAddZoneSearchQuery}
-                    data-testid="input-add-zone-search"
-                  />
-                  <CommandList>
-                    <CommandEmpty>
-                      {showAlreadyDisplayed ? "Already displayed." : "No cities found."}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {filteredCitiesToAdd.map((city) => (
-                        <CommandItem
-                          key={city.key}
-                          value={city.key}
-                          onSelect={() => {
-                            handleAddClock(city.key);
-                            setAddZoneOpen(false);
-                            setAddZoneSearchQuery("");
-                          }}
-                          data-testid={`menu-item-${city.key}`}
-                        >
-                          <div className="flex flex-col">
-                            <span>{city.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {city.country} ({city.gmtLabel})
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+        <div className="mb-[25px] sm:mb-8 relative" ref={addZoneRef}>
+          <div className="flex items-center gap-[5px] px-[10px] pb-[20px]">
+            <button
+              className="flex items-center gap-1 text-sm font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors focus:outline-none disabled:opacity-50"
+              disabled={!canAddMoreZones}
+              onClick={() => {
+                setAddZoneOpen(!addZoneOpen);
+                if (addZoneOpen) setAddZoneSearchQuery("");
+              }}
+              data-testid="button-add-timezone"
+            >
+              Add Time Zone
+              <ChevronsUpDown className="h-3 w-3 opacity-50" />
+            </button>
           </div>
+          {addZoneOpen && (
+            <div className="w-full rounded-[8px] border border-[#e5e7eb] bg-white dark:bg-background shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-2px_rgba(0,0,0,0.1)] overflow-clip">
+              <Command shouldFilter={false}>
+                <CommandInput
+                  placeholder="Search cities..."
+                  value={addZoneSearchQuery}
+                  onValueChange={setAddZoneSearchQuery}
+                  autoFocus
+                  data-testid="input-add-zone-search"
+                />
+                <CommandList>
+                  <CommandEmpty>
+                    {showAlreadyDisplayed ? "Already displayed." : "No cities found."}
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {filteredCitiesToAdd.map((city) => (
+                      <CommandItem
+                        key={city.key}
+                        value={city.key}
+                        onSelect={() => {
+                          handleAddClock(city.key);
+                          setAddZoneOpen(false);
+                          setAddZoneSearchQuery("");
+                        }}
+                        data-testid={`menu-item-${city.key}`}
+                      >
+                        <div className="flex flex-col">
+                          <span>{city.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {city.country} ({city.gmtLabel})
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </div>
+          )}
         </div>
 
         <DndContext

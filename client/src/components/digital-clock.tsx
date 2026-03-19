@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { GripVertical, X, Check, ChevronsUpDown } from "lucide-react";
+import { GripVertical, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -179,15 +178,12 @@ export function DigitalClock({
   const [editTime, setEditTime] = useState("");
   const editContainerRef = useRef<HTMLDivElement>(null);
 
-  const editAmPm = editTime ? (parseInt(editTime.split(":")[0]) >= 12 ? "PM" : "AM") : amPm;
-
   // Fetch weather data for this timezone
   const { data: weather } = useWeather(zoneKey || selectedZoneKey);
 
   function handleTimeClick() {
     if (onTimeUpdate && zoneKey) {
-      const currentTime = `${hours}:${minutes}`;
-      setEditTime(currentTime);
+      setEditTime(`${hours}:${minutes}`);
       setIsEditing(true);
     }
   }
@@ -233,12 +229,12 @@ export function DigitalClock({
               {cityName}
             </p>
             {isEditing ? (
-              <div className="mt-1 flex items-center gap-4 flex-wrap" ref={editContainerRef}>
-                <Input
+              <div className="mt-1 flex items-center gap-4" ref={editContainerRef}>
+                <input
                   type="time"
                   value={editTime}
                   onChange={(e) => setEditTime(e.target.value)}
-                  className="font-display text-4xl font-black h-auto py-2 px-3 w-48"
+                  className="font-display text-4xl font-black h-auto py-2 bg-transparent border-none outline-none appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-datetime-edit-fields-wrapper]:p-0"
                   autoFocus
                   data-testid="input-edit-time"
                 />
@@ -348,31 +344,77 @@ export function DigitalClock({
               )}
             </p>
           )}
-        </div>
 
-        {/* Time (right side on mobile) */}
-        {isEditing ? (
-          <div className="shrink-0 sm:hidden">
-            <div className="flex items-center gap-[10px] border border-[#c4c7cc] rounded-[8px] pl-[16px] pr-[10px] pt-[9px] pb-[10px] bg-transparent">
-              <div className="flex items-baseline shrink-0">
+          {/* Desktop: edit UI or time display */}
+          {isEditing ? (
+            <div className="hidden sm:block">
+              <div className="flex w-full items-center gap-[15px] border border-[#c4c7cc] rounded-[8px] pl-[16px] pr-[12px] pt-[11px] pb-[12px] overflow-hidden">
                 <input
-                  type="text"
+                  type="time"
                   value={editTime}
                   onChange={(e) => setEditTime(e.target.value)}
-                  className="font-display text-[24px] font-black leading-[33px] tracking-[-0.6px] bg-transparent outline-none w-[60px]"
+                  className="font-display text-[24px] font-black leading-[36px] tracking-[-0.6px] bg-transparent border-none outline-none appearance-none p-0 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-datetime-edit-fields-wrapper]:p-0"
                   autoFocus
                 />
-                <span className="font-display text-[14px] font-black leading-[33px] tracking-[-0.6px]">{editAmPm}</span>
+                <button
+                  onClick={handleUpdateClick}
+                  className="bg-[#4e82ee] rounded-[6px] px-[12px] pt-[6px] pb-[7px] text-white font-semibold text-sm leading-[21px] tracking-[-0.1px] shrink-0"
+                >
+                  OK
+                </button>
               </div>
-              <button
-                onClick={handleUpdateClick}
-                className="bg-[#4e82ee] rounded-[6px] px-[12px] pt-[6px] pb-[7px] text-white font-semibold text-sm leading-[21px] tracking-[-0.1px] shrink-0"
-              >
-                OK
-              </button>
             </div>
-          </div>
-        ) : (
+          ) : (
+            <div className="hidden sm:block">
+              <div className="flex items-center gap-2">
+                <p
+                  className={`font-display text-[36px] font-black leading-7 tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "[@media(hover:hover)]:hover:text-primary"}`}
+                  onClick={handleTimeClick}
+                  title="Click to edit time"
+                >
+                  {timeString}
+                </p>
+              </div>
+              <p className={`mt-[15px] text-xs text-muted-foreground flex items-center ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
+                <span>{timezone}</span>
+                {dayIndicator && (
+                  <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px]">
+                    {dayIndicator === "next" ? "Next Day" : "Prev Day"}
+                  </span>
+                )}
+                {weather && (
+                  <span className={getTemperatureColor(weather.celsius)} data-testid={`text-temp-${selectedZoneKey}`}>
+                    {weather.fahrenheit}°F / {weather.celsius}°C
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
+
+          {/* Mobile: edit UI below city name (full-width) */}
+          {isEditing && (
+            <div className="sm:hidden">
+              <div className="flex w-full items-center gap-[10px] border border-[#c4c7cc] rounded-[8px] pl-[16px] pr-[10px] pt-[9px] pb-[10px] overflow-hidden">
+                <input
+                  type="time"
+                  value={editTime}
+                  onChange={(e) => setEditTime(e.target.value)}
+                  className="font-display text-[18px] font-black leading-[33px] tracking-[-0.6px] bg-transparent border-none outline-none appearance-none p-0 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-datetime-edit-fields-wrapper]:p-0"
+                  autoFocus
+                />
+                <button
+                  onClick={handleUpdateClick}
+                  className="bg-[#4e82ee] rounded-[6px] px-[12px] pt-[6px] pb-[7px] text-white font-semibold text-sm leading-[21px] tracking-[-0.1px] shrink-0"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Time (right side on mobile) — hidden when editing */}
+        {!isEditing && (
           <div className="flex items-start gap-2 pt-[5px] sm:hidden">
             <p
               className={`font-display text-2xl font-black leading-7 tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "[@media(hover:hover)]:hover:text-primary"}`}
@@ -397,57 +439,6 @@ export function DigitalClock({
           >
             <EllipsisCircleIcon />
           </button>
-        )}
-      </div>
-
-      {/* Desktop: time and timezone below the top row */}
-      <div className="hidden sm:block pl-7">
-        {isEditing ? (
-          <div>
-            <div className="inline-flex items-center gap-[15px] border border-[#c4c7cc] rounded-[8px] pl-[16px] pr-[12px] pt-[11px] pb-[12px] bg-transparent overflow-clip">
-              <div className="flex items-baseline shrink-0">
-                <input
-                  type="text"
-                  value={editTime}
-                  onChange={(e) => setEditTime(e.target.value)}
-                  className="font-display text-[36px] font-black leading-[36px] tracking-[-0.6px] bg-transparent outline-none w-[120px]"
-                  autoFocus
-                />
-                <span className="font-display text-[14px] font-black leading-[36px] tracking-[-0.6px] ml-1">{editAmPm}</span>
-              </div>
-              <button
-                onClick={handleUpdateClick}
-                className="bg-[#4e82ee] rounded-[6px] px-[12px] pt-[6px] pb-[7px] text-white font-semibold text-sm leading-[21px] tracking-[-0.1px] shrink-0"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <p
-              className={`font-display text-[36px] font-black leading-7 tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "[@media(hover:hover)]:hover:text-primary"}`}
-              onClick={handleTimeClick}
-              title="Click to edit time"
-            >
-              {timeString}
-            </p>
-          </div>
-        )}
-        {!isEditing && (
-          <p className={`mt-[15px] text-xs text-muted-foreground flex items-center ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
-            <span>{timezone}</span>
-            {dayIndicator && (
-              <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px]">
-                {dayIndicator === "next" ? "Next Day" : "Prev Day"}
-              </span>
-            )}
-            {weather && (
-              <span className={getTemperatureColor(weather.celsius)} data-testid={`text-temp-${selectedZoneKey}`}>
-                {weather.fahrenheit}°F / {weather.celsius}°C
-              </span>
-            )}
-          </p>
         )}
       </div>
     </div>

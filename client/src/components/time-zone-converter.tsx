@@ -39,6 +39,7 @@ interface SortableClockItemProps {
   baseTime: Date;
   heroDate: Date;
   isNew: boolean;
+  isHighlighted: boolean;
   onZoneChange: (index: number, zoneKey: string) => void;
   onTimeUpdate: (zoneKey: string, hours: number, minutes: number) => void;
   onRemove: (zoneKey: string) => void;
@@ -53,6 +54,7 @@ function SortableClockItem({
   baseTime,
   heroDate,
   isNew,
+  isHighlighted,
   onZoneChange,
   onTimeUpdate,
   onRemove,
@@ -92,6 +94,7 @@ function SortableClockItem({
         selectedZoneKey={zoneKey}
         onZoneChange={(newZone) => onZoneChange(index, newZone)}
         isNew={isNew}
+        isHighlighted={isHighlighted}
         isDraggable
         isBeingDragged={isDragging}
         zoneKey={zoneKey}
@@ -105,7 +108,7 @@ function SortableClockItem({
   );
 }
 
-const MAX_CLOCKS = 12;
+const MAX_CLOCKS = 16;
 const STORAGE_KEY = "world-khlock-zones";
 
 function detectLocalCity(): string {
@@ -165,6 +168,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   });
   const [heroZone, setHeroZone] = useState<string>("london_GB");
   const [newlyAddedZone, setNewlyAddedZone] = useState<string | null>(null);
+  const [highlightedZone, setHighlightedZone] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -384,25 +388,29 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
                         <CommandItem
                           key={city.key}
                           value={city.key}
-                          disabled={isDisplayed}
                           onSelect={() => {
-                            if (isDisplayed) return;
-                            handleAddClock(city.key);
-                            setAddZoneOpen(false);
-                            setAddZoneSearchQuery("");
+                            if (isDisplayed) {
+                              // Close menu, scroll to tile, highlight it
+                              setAddZoneOpen(false);
+                              setAddZoneSearchQuery("");
+                              setHighlightedZone(city.key);
+                              setTimeout(() => {
+                                const el = document.querySelector(`[data-testid="clock-tile-${city.key}"]`);
+                                el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                              }, 100);
+                              setTimeout(() => setHighlightedZone(null), 1500);
+                            } else {
+                              handleAddClock(city.key);
+                              setAddZoneOpen(false);
+                              setAddZoneSearchQuery("");
+                            }
                           }}
-                          className={isDisplayed ? "opacity-60" : ""}
                           data-testid={`menu-item-${city.key}`}
                         >
                           <div className="flex flex-col">
-                            <div className="flex items-center gap-[6px]">
-                              <span>{city.name}</span>
-                              {isDisplayed && (
-                                <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px]">
-                                  Currently Displayed
-                                </span>
-                              )}
-                            </div>
+                            <span className={isDisplayed ? "font-semibold text-foreground" : ""}>
+                              {city.name}
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               {city.country} ({city.gmtLabel})
                             </span>
@@ -438,6 +446,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
                   baseTime={baseTime}
                   heroDate={heroTime}
                   isNew={newlyAddedZone === zoneKey}
+                  isHighlighted={highlightedZone === zoneKey}
                   onZoneChange={handleZoneChange}
                   onTimeUpdate={onTimeUpdate}
                   onRemove={handleRemoveClock}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { GripVertical, X, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ interface DigitalClockProps {
   selectedZoneKey?: string;
   onZoneChange?: (zoneKey: string) => void;
   isNew?: boolean;
+  isHighlighted?: boolean;
   isDraggable?: boolean;
   isBeingDragged?: boolean;
   zoneKey?: string;
@@ -154,6 +155,7 @@ export function DigitalClock({
   selectedZoneKey,
   onZoneChange,
   isNew = false,
+  isHighlighted = false,
   isDraggable = false,
   isBeingDragged = false,
   zoneKey,
@@ -174,6 +176,7 @@ export function DigitalClock({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTime, setEditTime] = useState("");
+  const editContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch weather data for this timezone
   const { data: weather } = useWeather(zoneKey || selectedZoneKey);
@@ -194,10 +197,18 @@ export function DigitalClock({
     }
   }
 
-  function handleCancelEdit() {
-    setIsEditing(false);
-    setEditTime("");
-  }
+  // Close editing when clicking outside
+  useEffect(() => {
+    if (!isEditing) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (editContainerRef.current && !editContainerRef.current.contains(e.target as Node)) {
+        setIsEditing(false);
+        setEditTime("");
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isEditing]);
 
   function handleRemoveWithConfirm() {
     if (onRemove && confirm(`Remove ${cityName}?`)) {
@@ -219,7 +230,7 @@ export function DigitalClock({
               {cityName}
             </p>
             {isEditing ? (
-              <div className="mt-1 flex items-center gap-4 flex-wrap">
+              <div className="mt-1 flex items-center gap-4 flex-wrap" ref={editContainerRef}>
                 <Input
                   type="time"
                   value={editTime}
@@ -231,13 +242,10 @@ export function DigitalClock({
                 <Button onClick={handleUpdateClick} data-testid="button-update-clock">
                   Update Clock
                 </Button>
-                <Button variant="ghost" onClick={handleCancelEdit} data-testid="button-cancel-edit">
-                  Cancel
-                </Button>
               </div>
             ) : (
               <p
-                className="mt-1 font-display text-6xl font-black tracking-tight text-foreground md:text-8xl cursor-pointer hover:text-primary transition-colors"
+                className="mt-1 font-display text-[60px] font-black tracking-tight text-foreground leading-[60px] md:text-8xl md:leading-[96px] cursor-pointer hover:text-primary transition-colors min-h-[60px] md:min-h-[96px]"
                 onClick={handleTimeClick}
                 title="Click to edit time"
                 data-testid="text-hero-time"
@@ -249,7 +257,7 @@ export function DigitalClock({
           <ThemeToggle />
         </div>
         <div
-          className="mt-2 flex items-center justify-between"
+          className="mt-2 flex items-center justify-between h-[28px]"
           data-testid="text-hero-timezone"
         >
           <p className="text-sm text-muted-foreground">
@@ -282,16 +290,19 @@ export function DigitalClock({
       ${
         isBeingDragged
           ? "bg-[#fdf19d] dark:bg-[#4a4020] border border-[#ffedbd] dark:border-[#5c4f2a] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-          : isEditing || isDropdownOpen
+          : isDropdownOpen
             ? "bg-[#fdf7ca] dark:bg-[#3d3520] border border-[#ffedbd] dark:border-[#5c4f2a]"
             : isDragActive
               ? "shadow-none bg-transparent"
-              : "[@media(hover:hover)]:hover:bg-[#f0f0f0] [@media(hover:hover)]:dark:hover:bg-[#2a2a2a]"
-      }
-      ${isNew ? "animate-highlight-yellow" : ""}`}
+              : isHighlighted
+                ? "animate-highlight-yellow"
+                : isNew
+                  ? "animate-highlight-yellow"
+                  : "[@media(hover:hover)]:hover:bg-[#f0f0f0] [@media(hover:hover)]:dark:hover:bg-[#2a2a2a]"
+      }`}
       data-testid={`clock-tile-${selectedZoneKey}`}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2" ref={isEditing ? editContainerRef : undefined}>
         {/* Drag handle */}
         {isDraggable && (
           <div
@@ -306,46 +317,54 @@ export function DigitalClock({
         {/* City name + timezone (left side) */}
         <div className="flex-1 min-w-0">
           {isSelectable && selectedZoneKey && onZoneChange ? (
-            <CitySelector
-              selectedCityKey={selectedZoneKey}
-              onCityChange={onZoneChange}
-              onOpenChange={setIsDropdownOpen}
-            />
+            <div className={isEditing ? "truncate" : ""}>
+              <CitySelector
+                selectedCityKey={selectedZoneKey}
+                onCityChange={onZoneChange}
+                onOpenChange={setIsDropdownOpen}
+              />
+            </div>
           ) : (
-            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+            <p className={`text-sm font-medium uppercase tracking-wide text-muted-foreground ${isEditing ? "truncate" : ""}`}>
               {cityName}
             </p>
           )}
-          {/* Mobile: zone + temp inline below city name */}
-          <p className={`text-xs text-muted-foreground sm:hidden flex items-center ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
-            <span>{timezone}</span>
-            {dayIndicator && (
-              <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px]">
-                {dayIndicator === "next" ? "Next Day" : "Prev Day"}
-              </span>
-            )}
-            {weather && (
-              <span className={getTemperatureColor(weather.celsius)}>
-                {weather.fahrenheit}°F / {weather.celsius}°C
-              </span>
-            )}
-          </p>
+          {/* Mobile: zone + temp inline below city name (hidden when editing) */}
+          {!isEditing && (
+            <p className={`text-xs text-muted-foreground sm:hidden flex items-center ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
+              <span>{timezone}</span>
+              {dayIndicator && (
+                <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px]">
+                  {dayIndicator === "next" ? "Next Day" : "Prev Day"}
+                </span>
+              )}
+              {weather && (
+                <span className={getTemperatureColor(weather.celsius)}>
+                  {weather.fahrenheit}°F / {weather.celsius}°C
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
         {/* Time (right side on mobile) */}
         {isEditing ? (
-          <div className="flex items-start gap-2 sm:hidden">
-            <Input
-              type="time"
-              value={editTime}
-              onChange={(e) => setEditTime(e.target.value)}
-              className="font-display text-xl font-black h-10 px-2 w-28"
-              autoFocus
-            />
-            <Button size="sm" onClick={handleUpdateClick}>OK</Button>
-            <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-              <X className="h-3 w-3" />
-            </Button>
+          <div className="flex items-start shrink-0 sm:hidden">
+            <div className="flex items-start gap-[10px] border border-[#c4c7cc] rounded-[8px] pl-[16px] pr-[10px] pt-[9px] pb-[10px]">
+              <Input
+                type="time"
+                value={editTime}
+                onChange={(e) => setEditTime(e.target.value)}
+                className="font-display text-2xl font-black h-auto p-0 border-0 shadow-none focus-visible:ring-0 w-[72px] leading-[33px] tracking-[-0.6px]"
+                autoFocus
+              />
+              <button
+                onClick={handleUpdateClick}
+                className="bg-[#4e82ee] rounded-[6px] px-[12px] pt-[6px] pb-[7px] text-white font-semibold text-sm leading-[21px] tracking-[-0.1px] shrink-0"
+              >
+                OK
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex items-start gap-2 pt-[5px] sm:hidden">
@@ -378,21 +397,21 @@ export function DigitalClock({
       {/* Desktop: time and timezone below the top row */}
       <div className="hidden sm:block pl-7">
         {isEditing ? (
-          <div className="mt-1 space-y-3 pb-2">
-            <Input
-              type="time"
-              value={editTime}
-              onChange={(e) => setEditTime(e.target.value)}
-              className="font-display text-2xl font-black h-12 px-3 w-full max-w-[140px]"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleUpdateClick} className="flex-1">
-                Update
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleCancelEdit} className="flex-1">
-                Cancel
-              </Button>
+          <div className="mt-1">
+            <div className="flex items-start gap-[15px] border border-[#c4c7cc] rounded-[8px] pl-[16px] pr-[12px] pt-[11px] pb-[12px] w-full">
+              <Input
+                type="time"
+                value={editTime}
+                onChange={(e) => setEditTime(e.target.value)}
+                className="font-display text-[36px] font-black h-auto p-0 border-0 shadow-none focus-visible:ring-0 flex-1 leading-[36px] tracking-[-0.6px]"
+                autoFocus
+              />
+              <button
+                onClick={handleUpdateClick}
+                className="bg-[#4e82ee] rounded-[6px] px-[12px] pt-[6px] pb-[7px] text-white font-semibold text-sm leading-[21px] tracking-[-0.1px] shrink-0"
+              >
+                OK
+              </button>
             </div>
           </div>
         ) : (
@@ -406,19 +425,21 @@ export function DigitalClock({
             </p>
           </div>
         )}
-        <p className={`mt-[15px] text-xs text-muted-foreground flex items-center ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
-          <span>{timezone}</span>
-          {dayIndicator && (
-            <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px]">
-              {dayIndicator === "next" ? "Next Day" : "Prev Day"}
-            </span>
-          )}
-          {weather && (
-            <span className={getTemperatureColor(weather.celsius)} data-testid={`text-temp-${selectedZoneKey}`}>
-              {weather.fahrenheit}°F / {weather.celsius}°C
-            </span>
-          )}
-        </p>
+        {!isEditing && (
+          <p className={`mt-[15px] text-xs text-muted-foreground flex items-center ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
+            <span>{timezone}</span>
+            {dayIndicator && (
+              <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px]">
+                {dayIndicator === "next" ? "Next Day" : "Prev Day"}
+              </span>
+            )}
+            {weather && (
+              <span className={getTemperatureColor(weather.celsius)} data-testid={`text-temp-${selectedZoneKey}`}>
+                {weather.fahrenheit}°F / {weather.celsius}°C
+              </span>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -25,6 +25,34 @@ import { CSS } from "@dnd-kit/utilities";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ALL_CITIES, getCityByKey, searchCities, getTimeInCityZone } from "@/lib/city-lookup";
 
+// Custom touch sensor: activates only on the drag handle (150ms)
+class HandleTouchSensor extends TouchSensor {
+  static activators = [
+    {
+      eventName: "onTouchStart" as const,
+      handler: ({ nativeEvent }: { nativeEvent: TouchEvent }) => {
+        const target = nativeEvent.target as HTMLElement;
+        return !!target.closest("[data-drag-handle]");
+      },
+    },
+  ];
+}
+
+// Custom touch sensor: activates on the whole tile (350ms), excluding interactive elements and the handle
+class TileTouchSensor extends TouchSensor {
+  static activators = [
+    {
+      eventName: "onTouchStart" as const,
+      handler: ({ nativeEvent }: { nativeEvent: TouchEvent }) => {
+        const target = nativeEvent.target as HTMLElement;
+        if (target.closest("[data-no-drag]")) return false;
+        if (target.closest("[data-drag-handle]")) return false;
+        return true;
+      },
+    },
+  ];
+}
+
 interface TimeZoneConverterProps {
   isCustomMode: boolean;
   selectedTime: Date | null;
@@ -90,6 +118,7 @@ function SortableClockItem({
       ref={setNodeRef}
       style={style}
       {...attributes}
+      {...listeners}
       className="relative"
       data-testid={`draggable-zone-${zoneKey}`}
     >
@@ -187,9 +216,15 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
         distance: 8,
       },
     }),
-    useSensor(TouchSensor, {
+    useSensor(HandleTouchSensor, {
       activationConstraint: {
         delay: 150,
+        tolerance: 8,
+      },
+    }),
+    useSensor(TileTouchSensor, {
+      activationConstraint: {
+        delay: 350,
         tolerance: 8,
       },
     }),

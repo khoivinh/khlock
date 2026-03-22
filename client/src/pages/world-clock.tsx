@@ -23,11 +23,12 @@ export default function WorldClock() {
   const [sortEastToWest, setSortEastToWest] = useState(() => {
     return localStorage.getItem(SORT_ETW_KEY) === "true";
   });
+  const [sidebarTop, setSidebarTop] = useState(28);
   const headerRef = useRef<HTMLElement>(null);
   const h1Ref = useRef<HTMLHeadingElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
-  // Scroll-driven header shrink: interpolate styles directly from scrollY
-  // so the header tracks the finger perfectly with no CSS transition snap.
+  // Scroll-driven header shrink + sidebar top tracking
   useEffect(() => {
     function updateHeader() {
       const ratio = Math.min(1, Math.max(0, window.scrollY / SCROLL_RANGE));
@@ -41,9 +42,15 @@ export default function WorldClock() {
         h1Ref.current.style.fontSize = `${fs}px`;
         h1Ref.current.style.lineHeight = `${fs}px`;
       }
+      // Update sidebar top to align with the toggle button
+      if (toggleRef.current) {
+        const rect = toggleRef.current.getBoundingClientRect();
+        setSidebarTop(rect.top);
+      }
     }
 
     window.addEventListener("scroll", updateHeader, { passive: true });
+    updateHeader(); // set initial position
     return () => window.removeEventListener("scroll", updateHeader);
   }, []);
 
@@ -82,7 +89,7 @@ export default function WorldClock() {
         ref={headerRef}
         className="sticky top-0 z-50 bg-background border-b border-border px-6 md:px-12 lg:px-24 py-8"
       >
-        <div className="mx-auto max-w-4xl flex flex-row items-center justify-between gap-4 pl-[10px]">
+        <div className="mx-auto max-w-4xl flex flex-row items-center justify-between gap-4 pl-[10px] pr-[10px]">
           <h1
             ref={h1Ref}
             className="font-display font-black tracking-tight text-foreground text-5xl"
@@ -91,6 +98,7 @@ export default function WorldClock() {
             Khlock
           </h1>
           <button
+            ref={toggleRef}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             aria-label={sidebarOpen ? "Close menu" : "Open menu"}
@@ -111,6 +119,7 @@ export default function WorldClock() {
             onToggle24Hour={setUse24Hour}
             sortEastToWest={sortEastToWest}
             onToggleSortEastToWest={setSortEastToWest}
+            topOffset={sidebarTop}
           />
         </div>
       </div>

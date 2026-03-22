@@ -342,6 +342,7 @@ export function DigitalClock({
           <div
             className="flex-shrink-0 flex items-start justify-center pt-2.5 pr-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing touch-none"
             {...(dragHandleListeners as React.HTMLAttributes<HTMLDivElement>)}
+            data-drag-handle
             title="Drag to reorder"
           >
             <GripVertical className="h-4 w-4" />
@@ -351,7 +352,7 @@ export function DigitalClock({
         {/* City name + timezone (left side) */}
         <div className="flex-1 min-w-0">
           {isSelectable && selectedZoneKey && onZoneChange ? (
-            <div className={isEditing ? "truncate" : ""}>
+            <div className={isEditing ? "truncate" : ""} data-no-drag>
               <CitySelector
                 selectedCityKey={selectedZoneKey}
                 onCityChange={onZoneChange}
@@ -365,7 +366,7 @@ export function DigitalClock({
           )}
           {/* Mobile: zone + temp inline below city name (hidden when editing) */}
           {!isEditing && (
-            <p className={`text-xs text-muted-foreground sm:hidden flex items-center flex-nowrap overflow-hidden ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
+            <p className={`text-xs text-muted-foreground sm:hidden flex items-center flex-wrap ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
               <span>{timezone}</span>
               {dayIndicator && (
                 <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px] whitespace-nowrap shrink-0">
@@ -373,7 +374,7 @@ export function DigitalClock({
                 </span>
               )}
               {!isCustomMode && weather && (
-                <span className={`${getTemperatureColor(weather.celsius)} truncate`}>
+                <span className={getTemperatureColor(weather.celsius)}>
                   {weather.fahrenheit}°F / {weather.celsius}°C
                 </span>
               )}
@@ -406,6 +407,7 @@ export function DigitalClock({
                   className={`font-display text-[36px] font-black leading-7 tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "[@media(hover:hover)]:hover:text-primary"}`}
                   onClick={handleTimeClick}
                   title="Click to edit time"
+                  data-no-drag
                 >
                   {timeString}
                 </p>
@@ -455,6 +457,7 @@ export function DigitalClock({
               className={`font-display text-2xl font-black leading-7 tracking-tight text-foreground cursor-pointer transition-colors ${isDragActive ? "" : "[@media(hover:hover)]:hover:text-primary"}`}
               onClick={handleTimeClick}
               title="Click to edit time"
+              data-no-drag
             >
               {timeString}
             </p>
@@ -470,6 +473,7 @@ export function DigitalClock({
               handleRemoveWithConfirm();
             }}
             title="Options"
+            data-no-drag
             data-testid={`button-remove-${selectedZoneKey}`}
           >
             <EllipsisCircleIcon />

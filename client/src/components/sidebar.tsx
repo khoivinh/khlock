@@ -57,6 +57,7 @@ interface SidebarProps {
   onToggle24Hour: (value: boolean) => void;
   sortEastToWest: boolean;
   onToggleSortEastToWest: (value: boolean) => void;
+  topOffset?: number;
 }
 
 export function Sidebar({
@@ -66,6 +67,7 @@ export function Sidebar({
   onToggle24Hour,
   sortEastToWest,
   onToggleSortEastToWest,
+  topOffset = 28,
 }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -138,13 +140,14 @@ export function Sidebar({
       {/* Sidebar panel */}
       <div
         ref={sidebarRef}
-        className={`absolute top-[28px] right-[-20px] z-[70] w-[320px] bg-[#333] rounded-[15px] shadow-[0_1px_2px_rgba(0,0,0,0.15)] overflow-hidden ${
+        className={`absolute right-[-10px] z-[70] w-[calc(100vw-32px)] sm:w-[320px] bg-[#333] rounded-[15px] shadow-[0_1px_2px_rgba(0,0,0,0.15)] overflow-hidden ${
           open
             ? "pointer-events-auto"
             : "pointer-events-none"
         }`}
         style={{
-          height: "calc(100vh - 56px)",
+          top: `${topOffset}px`,
+          height: `calc(100vh - ${topOffset + 28}px)`,
           animation: open
             ? "sidebar-open 350ms cubic-bezier(0.32, 0.72, 0, 1) forwards"
             : hasBeenOpened.current
@@ -159,7 +162,7 @@ export function Sidebar({
           }`}
         >
           {/* Header */}
-          <div className="flex items-start gap-[23px]">
+          <div className="flex items-center gap-[23px]">
             <div className="flex-1 min-w-0">
               <button
                 className="bg-[#4e82ee] rounded-[6px] px-[12px] pt-[6px] pb-[7px] text-white font-semibold text-[14px] leading-[21px] tracking-[-0.1px] whitespace-nowrap"
@@ -170,7 +173,7 @@ export function Sidebar({
             </div>
             <button
               onClick={onClose}
-              className="shrink-0 text-[#efefef] hover:text-white transition-colors"
+              className="shrink-0 w-[24px] h-[20px] text-[#efefef] hover:text-white transition-colors"
               aria-label="Close sidebar"
             >
               <DrawerToggleIcon open={true} />

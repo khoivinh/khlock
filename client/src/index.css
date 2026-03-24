@@ -159,4 +159,17 @@
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
+  touch-action: manipulation;
+}
+
+/* Subtle pre-activation feedback during long-press on touch devices */
+@media (hover: none) {
+  [data-testid^="draggable-zone-"]:active > div {
+    background-color: #f5f5f5;
+    transition: background-color 0.3s ease-out 0.15s;
+  }
+
+  .dark [data-testid^="draggable-zone-"]:active > div {
+    background-color: #222;
+  }
 }

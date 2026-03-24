@@ -1,0 +1,12 @@
+# Khlock Changes 2026-03-19 12:40
+- In the Add Time Zone feature, when searching a city, the new badge we added is too difficult to read. Let’s change the behavior so that the city is highlighted in the list of matching results. If the user taps on it, we can escape the search menu and show the active (yellow) state of the clock tile in the grid (or list, on mobile)beneath. The viewport should also scroll to that position. 
+- Let’s add a limit to the number of cities: we should cap it at 16.
+- Changes to the UI for editing time in the Clock Tiles
+  - When the user is editing, hideit the row GMT/temperature row
+  - Do not color the background of the active Clock Tile light yellow; it should remain in its default color
+  - Do not show a “Cancel” button
+  - Refer to the newdesign for the editable field in Figma
+    - Desktop design: https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=80-780&t=Qp7vA7G6Cg7K8e43-11
+    - Mobile design: https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=80-806&t=Qp7vA7G6Cg7K8e43-11
+  - On mobile, when the city name is too long to fit next to the new editable field, truncate the name of the city, as shown for “Amsterdam” in this Figma frame: https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=6-2&t=Qp7vA7G6Cg7K8e43-11
+  - Note that in the current design, when the user has updated a Clock Tile to a custom time and then hit submit, for some reason the area above containing the Hero Clock grows taller by a few pixels. Review the spacing in the Hero Clock to make sure it remains consistent in all cases

@@ -7,6 +7,8 @@ World Khlock is a world clock and timezone converter web app (React/TypeScript/T
 1. **Phase 3: UI Revisions + Cloud Sync** — revise clock tile interactions, hero clock, city menu, drag-and-drop, and add user accounts with cloud-synced preferences
 2. **iOS Native App** — SwiftUI app with feature parity + home/lock screen widgets + cloud sync
 
+**Status (2026-03-24):** Most Track 1 UI revisions are complete. The sidebar menu, long-press drag, and clock tile editing UI were added beyond the original scope. Cloud sync and the iOS app remain unstarted.
+
 ---
 
 ## Track 1: UI Revisions + Cloud Sync (Web)
@@ -18,8 +20,8 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 **Files:** `client/src/pages/world-clock.tsx`, `client/src/components/digital-clock.tsx`
 **Figma:** [Hero Clock component (node 70:1954)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=70-1954)
 
-- [ ] Remove the blue filled "Show Live Time" button from the sticky header
-- [ ] Add a "RESET TIME" text link in the hero clock's zone/temp row, right-aligned
+- [x] Remove the blue filled "Show Live Time" button from the sticky header
+- [x] Add a "RESET TIME" text link in the hero clock's zone/temp row, right-aligned
   - Style: Inter SemiBold, 14px, uppercase, color `#4e82ee`
   - No icon — text only
   - Padding: 10px horizontal, 7px vertical
@@ -30,36 +32,36 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 **Files:** `client/src/components/time-zone-converter.tsx`
 **Figma:** [Add Time Zone section (node 36:3207)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=36-3207)
 
-- [ ] Widen the Add Cities menu to span the full body column width (896px desktop, 327px mobile)
-- [ ] Menu overlays clock tiles below (does not push content down)
-- [ ] On mobile, position the menu near the top of the viewport so the user can see as much of it as possible
-- [ ] Keep existing visual style: white background, `#e5e7eb` border, rounded 8px, shadow, search field with magnifying glass icon
-- [ ] When a searched city is already displayed as a clock tile, show "Already displayed" status message instead of hiding it or showing "No cities found"
+- [x] Widen the Add Cities menu to span the full body column width (896px desktop, 327px mobile)
+- [ ] Menu overlays clock tiles below (does not push content down) — *currently pushes content down*
+- [x] On mobile, position the menu near the top of the viewport so the user can see as much of it as possible
+- [x] Keep existing visual style: white background, `#e5e7eb` border, rounded 8px, shadow, search field with magnifying glass icon
+- [x] When a searched city is already displayed, highlight it in the results list; tapping scrolls to and highlights the existing tile — *evolved from original "Already displayed" text approach*
 
 ### Scope: Remove List View Toggle
 **Files:** `client/src/components/time-zone-converter.tsx`, `client/src/components/digital-clock.tsx`
 
-- [ ] Remove the grid/list view toggle buttons entirely
-- [ ] Remove the `layout` state and all list-view-related code
-- [ ] Grid view is now the only layout
-- [ ] Remove `verticalListSortingStrategy` import and usage
+- [x] Remove the grid/list view toggle buttons entirely
+- [x] Remove the `layout` state and all list-view-related code
+- [x] Grid view is now the only layout
+- [x] Remove `verticalListSortingStrategy` import and usage
 
 ### Scope: Remove Meeting Planner Feature
 **Files:** `client/src/components/digital-clock.tsx`, `client/src/components/meeting-planner-modal.tsx`, `client/src/components/time-zone-converter.tsx`
 
-- [ ] Remove the calendar icon from clock tiles
-- [ ] Remove the MeetingPlannerModal component and its import
-- [ ] Delete `client/src/components/meeting-planner-modal.tsx`
-- [ ] Remove `otherZoneKeys` prop threading from TimeZoneConverter and DigitalClock
+- [x] Remove the calendar icon from clock tiles
+- [x] Remove the MeetingPlannerModal component and its import
+- [x] Delete `client/src/components/meeting-planner-modal.tsx`
+- [x] Remove `otherZoneKeys` prop threading from TimeZoneConverter and DigitalClock
 
 ### Scope: Next Day / Prev Day Badge
 **Files:** `client/src/components/digital-clock.tsx`
 **Figma:** [Tile Zone and Temp component (node 27:973)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=27-973)
 
-- [ ] Add an inline badge next to the GMT offset when the displayed time falls on a different calendar day than the hero clock's time
+- [x] Add an inline badge next to the GMT offset when the displayed time falls on a different calendar day than the hero clock's time
   - "NEXT DAY" if the tile's date is ahead of the hero's date
   - "PREV DAY" if the tile's date is behind the hero's date
-- [ ] Badge specs:
+- [x] Badge specs:
   - Border: 1px solid `#6b7280`
   - Border radius: 3px
   - Padding: 5px horizontal
@@ -70,41 +72,58 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 **Files:** `client/src/components/time-zone-converter.tsx`, `client/src/components/digital-clock.tsx`
 **Figma:** [Desktop Drag Tile frame (node 4:2)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=4-2), [Clock Tile states (node 17:2410)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=17-2410)
 
-- [ ] Blue drop indicator always appears to the LEFT of the destination spot
+- [x] Blue drop indicator always appears to the LEFT of the destination spot
   - Width: 4px, color: `#3c83f6`, border radius: 4px, full height of tile
-- [ ] Ghost tile (source position while dragging): 50% opacity
-- [ ] Drag overlay (tile following cursor): 90% opacity, yellow active background (`#fdf19d`), border 1px solid `#ffedbd`, shadow `0px 1px 2px rgba(0,0,0,0.15)`
+- [x] Ghost tile (source position while dragging): 50% opacity
+- [x] Drag overlay (tile following cursor): 90% opacity, yellow active background (`#fdf19d`), border 1px solid `#ffedbd`, shadow `0px 1px 2px rgba(0,0,0,0.15)`
+- [x] Long-press to initiate drag on tile body (600ms delay, 5px movement tolerance); drag handle icon uses faster 150ms delay
 
 ### Scope: Ellipsis Menu Replaces X Button
 **Files:** `client/src/components/digital-clock.tsx`
 
-- [ ] Replace the X (close) button in each clock tile with an ellipsis icon enclosed in a circle (~17px)
-- [ ] Clicking/tapping the ellipsis opens a native browser `confirm()` dialog asking the user to confirm removal
-- [ ] If confirmed, remove the clock tile; if cancelled, do nothing
+- [x] Replace the X (close) button in each clock tile with an ellipsis icon enclosed in a circle (~17px)
+- [x] Clicking/tapping the ellipsis opens a native browser `confirm()` dialog asking the user to confirm removal
+- [x] If confirmed, remove the clock tile; if cancelled, do nothing
 
 ### Scope: Clock Tile Design Refinements
 **Files:** `client/src/components/digital-clock.tsx`, `client/src/index.css`
 **Figma:** [Clock Tile states (node 17:2410)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=17-2410)
 
-- [ ] Tile states from Figma:
+- [x] Tile states from Figma:
   - **Default:** white background
   - **Hover:** `#f0f0f0` background (desktop only, `@media(hover:hover)`)
   - **Focus (editing/dropdown open):** `#fdf7ca` background, 1px `#ffedbd` border
   - **Active (being dragged):** `#fdf19d` background, 1px `#ffedbd` border, shadow `0px 1px 2px rgba(0,0,0,0.15)`
-- [ ] Desktop tile layout: city name and time stacked vertically, 15px gap between city+time block and zone+temp row
-- [ ] Mobile tile layout: city name and time side-by-side (horizontal), 0px gap to zone+temp
+- [x] Desktop tile layout: city name and time stacked vertically, 15px gap between city+time block and zone+temp row
+- [x] Mobile tile layout: city name and time side-by-side (horizontal), 0px gap to zone+temp
+- [x] Clock tile editing: single `type="time"` input with bordered edit UI matching Figma specs
+- [x] Duplicate city guard: changing a tile's city to one already displayed swaps positions instead of creating duplicates
+- [x] Max clocks: 16 (web)
+
+### Scope: Sidebar Menu *(added post-PRD, implemented 2026-03-21)*
+**Files:** `client/src/components/sidebar.tsx`, `client/src/pages/world-clock.tsx`
+**Figma:** [Sidebar section (node 114:1302)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=114-1302)
+
+- [x] Sidebar slides in from the right, overlays the body
+- [x] Contains: 24-hour clock toggle, east-to-west sort toggle, appearance mode (light/dark/system)
+- [x] Full viewport height with ~28px padding top and bottom
+- [x] Full viewport width on mobile
+- [x] Smooth expand/collapse animation; no animation on initial page load
+- [x] Drawer icon position stays consistent between open/closed states
+- [x] Body scroll locked when sidebar is open
+- [x] Account/login UI designed but intentionally non-functional (deferred to cloud sync phase)
 
 ### Scope: Cloud Sync & User Accounts (Planning Phase)
 **Auth:** Clerk (Google + Apple social login, passkeys)
 **Backend:** Cloudflare Workers + D1
 
-This section is for **planning only** — implementation deferred to a later phase.
+This section is for **planning only** — implementation deferred to a later phase. The sidebar now exists with placeholder account UI ("Login or Sign Up" button), partially resolving some design decisions.
 
-- [ ] Design decisions needed before implementation:
-  - Header UI: "Login or Sign Up" button (logged out) → hamburger icon (logged in)
-  - Hamburger menu behavior: slide-out drawer vs. dropdown? What items appear?
-  - Login flow: Clerk modal vs. redirect?
-  - Mobile behavior for login/hamburger interactions?
+- [x] Design decisions partially resolved:
+  - Header UI: drawer icon opens sidebar; sidebar contains "Login or Sign Up" button (logged out)
+  - Sidebar behavior: slide-out drawer from right — decided and implemented
+  - Login flow: still TBD (Clerk modal vs. redirect)
+  - Mobile behavior: sidebar spans full width on mobile — decided and implemented
 - [ ] Planned implementation (not yet):
   - Integrate Clerk for authentication (sign in / sign up / sign out)
   - Create Cloudflare Worker API endpoints (`GET/PUT /api/preferences`)
@@ -114,7 +133,7 @@ This section is for **planning only** — implementation deferred to a later pha
 
 ### Out of Scope (Phase 3)
 - Theme/color palette changes (current palette is close to final)
-- Clerk implementation (design decisions only in this phase)
+- Clerk implementation (sidebar UI exists, but auth is deferred)
 
 ---
 
@@ -136,7 +155,7 @@ Build a native SwiftUI iOS app with full feature parity to the web app, plus hom
    - Full-width search menu with "Already displayed" status for duplicate cities
    - Remove cities (ellipsis menu → confirmation)
    - Drag-to-reorder with left-side drop indicator
-   - Max 12 clocks
+   - Max 16 clocks (matching web)
    - Cloud sync of city list and order via Clerk account (cross-platform with web)
 
 3. **Weather Integration**
@@ -215,11 +234,14 @@ Khlock/
 - Test both light and dark modes
 - Verify grid layout at 375px, 768px, 1024px, 1440px
 - Confirm drag-to-reorder: drop indicator always on LEFT, correct opacity for ghost (50%) and overlay (90%)
+- Verify long-press drag works on tile body (600ms) and drag handle (150ms)
 - Verify "Reset Time" text link appears in hero zone/temp row in custom time mode and resets correctly
-- Verify Add Cities menu spans full body width, overlays content, positions near top on mobile
-- Verify "Already displayed" message appears for cities already shown
+- Verify Add Cities menu spans full body width, positions near top on mobile
+- Verify already-displayed cities are highlighted in search results, tapping scrolls to tile
 - Verify Next Day / Prev Day badges appear for clocks on different calendar days
 - Verify ellipsis icon opens native confirm dialog and removes tile on confirmation
+- Verify sidebar: opens/closes smoothly, toggles work, body scroll locked when open
+- Verify duplicate city change swaps tiles instead of crashing
 - Deploy to https://khlock.pages.dev/ and test on real device
 
 ### iOS (Track 2)
@@ -233,14 +255,11 @@ Khlock/
 
 ---
 
-## Recommended Next Step
-Start with **Track 1** UI revisions since they're lower risk and build momentum. Suggested implementation order:
-1. Remove list view toggle and meeting planner (cleanup)
-2. Replace X button with ellipsis + confirm dialog
-3. Add Next Day / Prev Day badge
-4. Revise drag-and-drop behavior
-5. Redesign Add Cities menu (full-width, overlay, "Already displayed")
-6. Move "Reset Time" button to hero zone/temp row
-7. Cloud sync design decisions (planning only)
+## Recommended Next Steps
 
-Once the web design is finalized, use it as the definitive reference for the iOS app.
+### Track 1 remaining items:
+1. Fix Add Cities menu to overlay content instead of pushing it down
+2. Implement Clerk authentication + cloud sync
+
+### Then:
+3. Begin Track 2 (iOS native app), using the finalized web app as the reference design

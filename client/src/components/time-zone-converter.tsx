@@ -5,7 +5,7 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -211,7 +211,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   const preSortOrderRef = useRef<string[] | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 8,
       },
@@ -224,7 +224,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
     }),
     useSensor(TileTouchSensor, {
       activationConstraint: {
-        delay: 600,
+        delay: 500,
         tolerance: 5,
       },
     }),

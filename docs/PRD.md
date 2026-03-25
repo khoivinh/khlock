@@ -263,3 +263,10 @@ Khlock/
 
 ### Then:
 3. Begin Track 2 (iOS native app), using the finalized web app as the reference design
+
+---
+
+## Backlog
+
+- [ ] Register a custom domain (e.g., khlock.com) and update all settings accordingly — Cloudflare Pages custom domain, Clerk production instance domain, Worker CORS allowed origins, DNS records
+- [ ] Keyboard shortcuts — add clock tiles, tab between clocks, edit custom time, etc.

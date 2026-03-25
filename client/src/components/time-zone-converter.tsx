@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, startTransition } from "react";
+import { useState, useEffect, useCallback, useRef, startTransition, type SetStateAction } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { DigitalClock } from "@/components/digital-clock";
 import {
@@ -62,7 +62,7 @@ interface TimeZoneConverterProps {
   sortEastToWest: boolean;
   onSortEastToWestChange: (value: boolean) => void;
   selectedZones: string[];
-  onZonesChange: (zones: string[]) => void;
+  onZonesChange: (zones: SetStateAction<string[]>) => void;
 }
 
 interface SortableClockItemProps {
@@ -207,13 +207,6 @@ export function initZonesFromStorage(): string[] {
 
 export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, onReset, use24Hour, sortEastToWest, onSortEastToWestChange, selectedZones, onZonesChange }: TimeZoneConverterProps) {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const setSelectedZones = useCallback((update: string[] | ((prev: string[]) => string[])) => {
-    if (typeof update === "function") {
-      onZonesChange(update(selectedZones));
-    } else {
-      onZonesChange(update);
-    }
-  }, [selectedZones, onZonesChange]);
   const [heroZone, setHeroZone] = useState<string>("london_GB");
   const [newlyAddedZone, setNewlyAddedZone] = useState<string | null>(null);
   const [highlightedZone, setHighlightedZone] = useState<string | null>(null);
@@ -252,7 +245,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   useEffect(() => {
     if (sortEastToWest) {
       // Snapshot current manual order before sorting
-      setSelectedZones((prev) => {
+      onZonesChange((prev) => {
         preSortOrderRef.current = [...prev];
         const sorted = [...prev].sort((a, b) => {
           const cityA = getCityByKey(a);
@@ -265,7 +258,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
     } else if (preSortOrderRef.current) {
       // Restore pre-sort order, accounting for zones added/removed since
       const snapshot = preSortOrderRef.current;
-      setSelectedZones((current) => {
+      onZonesChange((current) => {
         const currentSet = new Set(current);
         const restored = snapshot.filter((z) => currentSet.has(z));
         const added = current.filter((z) => !snapshot.includes(z));
@@ -291,10 +284,9 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   }, [isCustomMode]);
 
   const handleZoneChange = useCallback((index: number, zoneKey: string) => {
-    setSelectedZones((prev) => {
+    onZonesChange((prev: string[]) => {
       const existingIndex = prev.indexOf(zoneKey);
       if (existingIndex !== -1 && existingIndex !== index) {
-        // Swap positions instead of creating duplicate keys
         const newZones = [...prev];
         newZones[existingIndex] = newZones[index];
         newZones[index] = zoneKey;
@@ -304,23 +296,23 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
       newZones[index] = zoneKey;
       return newZones;
     });
-  }, []);
+  }, [onZonesChange]);
 
   const handleAddClock = useCallback((zoneKey: string) => {
     if (selectedZones.length >= MAX_CLOCKS) return;
     if (selectedZones.includes(zoneKey)) return;
 
-    setSelectedZones((prev) => [zoneKey, ...prev]);
+    onZonesChange((prev: string[]) => [zoneKey, ...prev]);
     setNewlyAddedZone(zoneKey);
 
     setTimeout(() => {
       setNewlyAddedZone(null);
     }, 1500);
-  }, [selectedZones]);
+  }, [selectedZones, onZonesChange]);
 
   const handleRemoveClock = useCallback((zoneKey: string) => {
-    setSelectedZones((prev) => prev.filter((z) => z !== zoneKey));
-  }, []);
+    onZonesChange((prev: string[]) => prev.filter((z: string) => z !== zoneKey));
+  }, [onZonesChange]);
 
   const [addZoneOpen, setAddZoneOpen] = useState(false);
   const [addZoneSearchQuery, setAddZoneSearchQuery] = useState("");
@@ -363,7 +355,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
         preSortOrderRef.current = null;
         onSortEastToWestChange(false);
       }
-      setSelectedZones((items) => {
+      onZonesChange((items) => {
         const oldIndex = items.indexOf(active.id as string);
         const newIndex = items.indexOf(over.id as string);
         return arrayMove(items, oldIndex, newIndex);

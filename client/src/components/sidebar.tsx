@@ -233,7 +233,7 @@ export function Sidebar({
         }`}
         style={{
           top: `${topOffset - 18}px`,
-          height: `calc(80dvh - ${topOffset - 18 + 28}px)`,
+          height: `calc(92dvh - ${topOffset - 18 + 28}px)`,
           animation: open
             ? "sidebar-open 350ms cubic-bezier(0.32, 0.72, 0, 1) forwards"
             : hasBeenOpened.current
@@ -243,7 +243,7 @@ export function Sidebar({
         }}
       >
         <div
-          className={`flex flex-col gap-[53px] h-full pl-[25px] pr-[20px] pt-[18px] pb-[28px] transition-opacity duration-200 ${
+          className={`flex flex-col gap-[53px] h-full pl-[20px] pr-[20px] pt-[18px] pb-[28px] transition-opacity duration-200 ${
             open ? "opacity-100 delay-150" : "opacity-0"
           }`}
         >

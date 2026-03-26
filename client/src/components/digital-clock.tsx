@@ -363,7 +363,7 @@ export function DigitalClock({
                   />
                 </div>
               ) : (
-                <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap text-ellipsis overflow-hidden">
+                <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap text-ellipsis overflow-hidden py-2">
                   {cityName}
                 </p>
               )}
@@ -470,10 +470,10 @@ export function DigitalClock({
           )}
         </div>
 
-        {/* Ellipsis menu button */}
-        {onRemove && (
+        {/* Ellipsis menu button — rendered invisible during drag to preserve layout */}
+        {(onRemove || isBeingDragged) && (
           <button
-            className="flex-shrink-0 flex items-center justify-center py-[11px] px-[5px] rounded-md text-muted-foreground/50 hover:text-foreground transition-colors touch-manipulation"
+            className={`flex-shrink-0 flex items-center justify-center py-[11px] px-[5px] rounded-md text-muted-foreground/50 hover:text-foreground transition-colors touch-manipulation ${isBeingDragged ? "invisible" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
               handleRemoveWithConfirm();

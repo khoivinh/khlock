@@ -1,4 +1,4 @@
-import cityTimezones from "city-timezones";
+import cityData from "@/data/cities.json";
 
 export interface CityData {
   city: string;
@@ -10,19 +10,37 @@ export interface CityData {
   population?: number;
 }
 
-const cityMapping = (cityTimezones as any).cityMapping as Array<{
+interface RawCity {
   city: string;
   city_ascii: string;
   lat: number;
   lng: number;
-  pop?: number;
+  pop: number;
   country: string;
   iso2: string;
-  iso3: string;
   province: string;
-  state_ansi?: string;
+  state_ansi: string;
   timezone: string;
-}>;
+}
+
+// Compact format with interned strings: { c: countries, t: timezones, p: provinces, d: rows }
+// Row values that are numbers are indices into the corresponding string table
+const raw = cityData as { c: string[]; t: string[]; p: string[]; d: unknown[][] };
+function deref(val: unknown, table: string[]): string {
+  return typeof val === "number" ? table[val] : (val as string);
+}
+const cityMapping: RawCity[] = raw.d.map((r) => ({
+  city: r[0] as string,
+  city_ascii: r[1] as string,
+  lat: r[2] as number,
+  lng: r[3] as number,
+  pop: r[4] as number,
+  country: deref(r[5], raw.c),
+  iso2: r[6] as string,
+  province: deref(r[7], raw.p),
+  state_ansi: r[8] as string,
+  timezone: deref(r[9], raw.t),
+}));
 
 function getGmtOffset(timezone: string): number {
   try {
@@ -59,23 +77,6 @@ function formatGmtLabel(offset: number): string {
   return `GMT${sign}${hours}:${minutes.toString().padStart(2, "0")}`;
 }
 
-// Dedupe by city name + country + timezone (prevent collisions for same-name cities in same country)
-const uniqueCities = new Map<string, (typeof cityMapping)[0]>();
-cityMapping.forEach((city) => {
-  const key = `${city.city_ascii.toLowerCase()}_${city.iso2}_${city.timezone}`;
-  const existing = uniqueCities.get(key);
-  if (!existing || (city.pop || 0) > (existing.pop || 0)) {
-    uniqueCities.set(key, city);
-  }
-});
-
-const sortedCities = Array.from(uniqueCities.values()).sort((a, b) => {
-  return (b.pop || 0) - (a.pop || 0);
-});
-
-// Include top 1500 most populous cities for comprehensive worldwide coverage
-const popularCities = sortedCities.slice(0, 1500);
-
 export interface TimezoneOption {
   key: string;
   name: string;
@@ -89,17 +90,32 @@ export interface TimezoneOption {
   lng: number;
 }
 
-// Generate unique key: cityName_countryISO2 (e.g., "paris_FR", "sanJose_US", "sanJose_CR")
-function generateCityKey(city: (typeof cityMapping)[0]): string {
-  const baseName = city.city_ascii.replace(/[^a-zA-Z0-9]/g, "");
-  const normalized = baseName.charAt(0).toLowerCase() + baseName.slice(1);
-  return `${normalized}_${city.iso2}`;
+function normalizeForKey(ascii: string): string {
+  const baseName = ascii.replace(/[^a-zA-Z0-9]/g, "");
+  return baseName.charAt(0).toLowerCase() + baseName.slice(1);
 }
 
-const timezoneOptions: TimezoneOption[] = popularCities.map((city) => {
+// Generate unique keys: highest-pop city gets the base key (e.g., "oxford_US"),
+// others get province/state appended (e.g., "oxford_US_OH") for disambiguation.
+// Data is already sorted by population descending, so first occurrence = highest pop.
+const usedKeys = new Set<string>();
+const timezoneOptions: TimezoneOption[] = cityMapping.map((city) => {
+  const baseKey = `${normalizeForKey(city.city_ascii)}_${city.iso2}`;
+  let key = baseKey;
+  if (usedKeys.has(key) && (city.state_ansi || city.province)) {
+    const suffix = normalizeForKey(city.state_ansi || city.province);
+    key = `${baseKey}_${suffix}`;
+  }
+  // Final fallback: append timezone fragment for truly ambiguous cases
+  if (usedKeys.has(key)) {
+    const tzSuffix = city.timezone.split("/").pop()!.replace(/[^a-zA-Z]/g, "");
+    key = `${baseKey}_${tzSuffix}`;
+  }
+  usedKeys.add(key);
+
   const offset = getGmtOffset(city.timezone);
   return {
-    key: generateCityKey(city),
+    key,
     name: city.city,
     gmtLabel: formatGmtLabel(offset),
     offset,
@@ -112,7 +128,6 @@ const timezoneOptions: TimezoneOption[] = popularCities.map((city) => {
   };
 });
 
-// Keys are now unique by city+country, no collision possible
 export const ALL_CITIES: TimezoneOption[] = timezoneOptions.sort(
   (a, b) => b.offset - a.offset
 );

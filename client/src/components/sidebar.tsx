@@ -75,29 +75,31 @@ function SyncStatusIndicator({ status }: { status: SyncStatus }) {
 }
 
 // Auth header section when Clerk is configured
-function AuthHeader() {
+function AuthHeader({ showLogout }: { showLogout?: boolean }) {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
 
   if (isSignedIn && user) {
+    const firstName = user.firstName || user.fullName?.split(" ")[0] || "User";
+    const email = user.primaryEmailAddress?.emailAddress;
+
     return (
-      <div className="flex items-center gap-[10px]">
-        <img
-          src={user.imageUrl}
-          alt=""
-          className="w-[28px] h-[28px] rounded-full shrink-0"
-        />
+      <>
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-semibold text-white truncate leading-[18px]">
-            {user.fullName || user.primaryEmailAddress?.emailAddress || "User"}
+          <p className="font-display text-[14px] font-black leading-[22px] tracking-[-0.43px] text-[#efefef]">
+            Welcome back,
           </p>
-          <SignOutButton>
-            <button className="text-[12px] text-[#9ca3af] hover:text-white transition-colors">
-              Sign out
-            </button>
-          </SignOutButton>
+          <p className="font-display text-[29px] font-black leading-[32px] tracking-[-0.43px] text-[#efefef]">
+            {firstName}
+          </p>
+          {email && (
+            <p className="text-[14px] font-normal leading-[23px] text-[#efefef]">
+              {email}
+            </p>
+          )}
         </div>
-      </div>
+        {/* Logout rendered as a menu item via the showLogout flag */}
+      </>
     );
   }
 
@@ -109,6 +111,21 @@ function AuthHeader() {
         Login or Sign Up
       </button>
     </SignInButton>
+  );
+}
+
+function LogoutMenuItem() {
+  const { isSignedIn } = useAuth();
+  if (!isSignedIn) return null;
+
+  return (
+    <SignOutButton>
+      <button className="flex items-center h-[28px] w-full">
+        <span className="flex-1 font-medium text-[14px] leading-[22px] tracking-[-0.43px] uppercase text-[#efefef] text-left">
+          Logout
+        </span>
+      </button>
+    </SignOutButton>
   );
 }
 
@@ -131,6 +148,8 @@ interface SidebarProps {
   onToggle24Hour: (value: boolean) => void;
   sortEastToWest: boolean;
   onToggleSortEastToWest: (value: boolean) => void;
+  showRelativeTime: boolean;
+  onToggleShowRelativeTime: (value: boolean) => void;
   topOffset?: number;
   syncStatus: SyncStatus;
 }
@@ -142,6 +161,8 @@ export function Sidebar({
   onToggle24Hour,
   sortEastToWest,
   onToggleSortEastToWest,
+  showRelativeTime,
+  onToggleShowRelativeTime,
   topOffset = 28,
   syncStatus,
 }: SidebarProps) {
@@ -259,7 +280,7 @@ export function Sidebar({
             </div>
             <button
               onClick={onClose}
-              className="shrink-0 w-[24px] h-[20px] text-[#efefef] hover:text-white transition-colors"
+              className="shrink-0 w-[24px] h-[20px] text-[#efefef] hover:text-white transition-colors mt-[2px]"
               aria-label="Close sidebar"
             >
               <DrawerToggleIcon open={true} />
@@ -296,6 +317,17 @@ export function Sidebar({
               </span>
               <ToggleSwitch checked={sortEastToWest} onChange={onToggleSortEastToWest} />
             </div>
+
+            {/* Show Relative Time */}
+            <div className="flex items-center h-[28px]">
+              <span className="flex-1 font-medium text-[14px] leading-[22px] tracking-[-0.43px] uppercase text-[#efefef]">
+                Show Relative Time
+              </span>
+              <ToggleSwitch checked={showRelativeTime} onChange={onToggleShowRelativeTime} />
+            </div>
+
+            {/* Logout (only shown when signed in) */}
+            {isClerkConfigured && <LogoutMenuItem />}
           </div>
         </div>
       </div>

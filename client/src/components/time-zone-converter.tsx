@@ -83,6 +83,7 @@ interface TimeZoneConverterProps {
   use24Hour: boolean;
   sortEastToWest: boolean;
   onSortEastToWestChange: (value: boolean) => void;
+  showRelativeTime: boolean;
   selectedZones: string[];
   onZonesChange: (zones: SetStateAction<string[]>) => void;
 }
@@ -102,6 +103,8 @@ interface SortableClockItemProps {
   isDragActive: boolean;
   isCustomMode: boolean;
   use24Hour: boolean;
+  heroOffset: number;
+  showRelativeTime: boolean;
 }
 
 function SortableClockItem({
@@ -119,6 +122,8 @@ function SortableClockItem({
   isDragActive,
   isCustomMode,
   use24Hour,
+  heroOffset,
+  showRelativeTime,
 }: SortableClockItemProps) {
   const {
     attributes,
@@ -165,6 +170,7 @@ function SortableClockItem({
         heroDate={heroDate}
         isCustomMode={isCustomMode}
         use24Hour={use24Hour}
+        relativeOffset={showRelativeTime ? Math.round((city?.offset ?? 0) - heroOffset) : undefined}
       />
     </div>
   );
@@ -227,7 +233,7 @@ export function initZonesFromStorage(): string[] {
   return DEFAULT_ZONES;
 }
 
-export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, onReset, use24Hour, sortEastToWest, onSortEastToWestChange, selectedZones, onZonesChange }: TimeZoneConverterProps) {
+export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, onReset, use24Hour, sortEastToWest, onSortEastToWestChange, showRelativeTime, selectedZones, onZonesChange }: TimeZoneConverterProps) {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [heroZone, setHeroZone] = useState<string>("london_GB");
   const [newlyAddedZone, setNewlyAddedZone] = useState<string | null>(null);
@@ -455,6 +461,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   const baseTime = getBaseTime();
   const heroCity = getCityByKey(heroZone);
   const heroTime = heroCity ? getTimeInCityZone(baseTime, heroCity.offset) : baseTime;
+  const heroOffset = heroCity?.offset ?? 0;
   const activeCity = activeId ? getCityByKey(activeId) : null;
 
   return (
@@ -491,7 +498,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
             </button>
           </div>
           {addZoneOpen && (
-            <div className="w-full rounded-[8px] border border-[#e5e7eb] bg-white dark:bg-background shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-2px_rgba(0,0,0,0.1)] overflow-clip">
+            <div className="absolute left-0 right-0 z-50 rounded-[8px] border border-[#e5e7eb] bg-white dark:bg-background shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-2px_rgba(0,0,0,0.1)] overflow-clip">
               <Command shouldFilter={false}>
                 <CommandInput
                   placeholder="Search cities..."
@@ -575,6 +582,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
                   isDragActive={activeId !== null}
                   isCustomMode={isCustomMode}
                   use24Hour={use24Hour}
+                  heroOffset={heroOffset}
+                  showRelativeTime={showRelativeTime}
                 />
               ))}
             </div>
@@ -593,6 +602,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
                   heroDate={heroTime}
                   isCustomMode={isCustomMode}
                   use24Hour={use24Hour}
+                  relativeOffset={showRelativeTime ? Math.round(activeCity.offset - heroOffset) : undefined}
                 />
               </div>
             ) : null}

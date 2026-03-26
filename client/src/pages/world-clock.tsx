@@ -16,6 +16,7 @@ const FS_END = 30;        // text-3xl = 1.875rem = 30px
 const USE_24H_KEY = "world-khlock-24h";
 const SORT_ETW_KEY = "world-khlock-sort-etw";
 const ZONES_KEY = "world-khlock-zones";
+const SHOW_REL_TIME_KEY = "world-khlock-rel-time";
 
 export default function WorldClock() {
   const [isCustomMode, setIsCustomMode] = useState(false);
@@ -26,6 +27,9 @@ export default function WorldClock() {
   });
   const [sortEastToWest, setSortEastToWest] = useState(() => {
     return localStorage.getItem(SORT_ETW_KEY) === "true";
+  });
+  const [showRelativeTime, setShowRelativeTime] = useState(() => {
+    return localStorage.getItem(SHOW_REL_TIME_KEY) === "true";
   });
   const [selectedZones, setSelectedZones] = useState<string[]>(initZonesFromStorage);
   const { theme, setTheme } = useTheme();
@@ -69,6 +73,10 @@ export default function WorldClock() {
   }, [sortEastToWest]);
 
   useEffect(() => {
+    localStorage.setItem(SHOW_REL_TIME_KEY, String(showRelativeTime));
+  }, [showRelativeTime]);
+
+  useEffect(() => {
     localStorage.setItem(ZONES_KEY, JSON.stringify(selectedZones));
   }, [selectedZones]);
 
@@ -77,12 +85,14 @@ export default function WorldClock() {
       zones: selectedZones,
       use24h: use24Hour,
       sortEastToWest,
+      showRelativeTime,
       theme: theme as "light" | "dark" | "system",
     },
-    setPreferences: useCallback((prefs: { zones: string[]; use24h: boolean; sortEastToWest: boolean; theme: "light" | "dark" | "system" }) => {
+    setPreferences: useCallback((prefs: { zones: string[]; use24h: boolean; sortEastToWest: boolean; showRelativeTime: boolean; theme: "light" | "dark" | "system" }) => {
       setSelectedZones(prefs.zones);
       setUse24Hour(prefs.use24h);
       setSortEastToWest(prefs.sortEastToWest);
+      setShowRelativeTime(prefs.showRelativeTime);
       setTheme(prefs.theme);
     }, [setTheme]),
   });
@@ -143,6 +153,8 @@ export default function WorldClock() {
             onToggle24Hour={setUse24Hour}
             sortEastToWest={sortEastToWest}
             onToggleSortEastToWest={setSortEastToWest}
+            showRelativeTime={showRelativeTime}
+            onToggleShowRelativeTime={setShowRelativeTime}
             topOffset={sidebarTop}
             syncStatus={syncStatus}
           />
@@ -159,6 +171,7 @@ export default function WorldClock() {
             use24Hour={use24Hour}
             sortEastToWest={sortEastToWest}
             onSortEastToWestChange={setSortEastToWest}
+            showRelativeTime={showRelativeTime}
             selectedZones={selectedZones}
             onZonesChange={setSelectedZones}
           />

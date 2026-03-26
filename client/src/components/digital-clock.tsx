@@ -47,6 +47,7 @@ interface DigitalClockProps {
   isCustomMode?: boolean;
   onReset?: () => void;
   use24Hour?: boolean;
+  relativeOffset?: number;
 }
 
 function CitySelector({
@@ -126,6 +127,12 @@ function CitySelector({
   );
 }
 
+function formatRelativeOffset(offset: number): string {
+  if (offset === 0) return "0HR";
+  const sign = offset > 0 ? "+" : "";
+  return `${sign}${offset}HR`;
+}
+
 function getDayIndicator(tileTime: Date, heroDate?: Date): "next" | "prev" | null {
   if (!heroDate) return null;
   const tileDay = tileTime.getDate();
@@ -166,6 +173,7 @@ export function DigitalClock({
   isCustomMode = false,
   onReset,
   use24Hour = true,
+  relativeOffset,
 }: DigitalClockProps) {
   const rawHours = time.getHours();
   const minutes = time.getMinutes().toString().padStart(2, "0");
@@ -416,6 +424,9 @@ export function DigitalClock({
                 </p>
               </div>
               <p className={`mt-[15px] text-xs text-muted-foreground flex items-center ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
+                {relativeOffset !== undefined && (
+                  <span>{formatRelativeOffset(relativeOffset)}</span>
+                )}
                 <span>{timezone}</span>
                 {dayIndicator && (
                   <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px]">
@@ -455,6 +466,9 @@ export function DigitalClock({
           {/* Mobile: zone + temp below city name */}
           {!isEditing && (
             <p className={`text-xs text-muted-foreground sm:hidden flex items-center flex-wrap ${dayIndicator ? "gap-[6px]" : "gap-[10px]"}`}>
+              {relativeOffset !== undefined && (
+                <span>{formatRelativeOffset(relativeOffset)}</span>
+              )}
               <span>{timezone}</span>
               {dayIndicator && (
                 <span className="inline-flex items-center justify-center px-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px] whitespace-nowrap shrink-0">

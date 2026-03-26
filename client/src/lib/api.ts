@@ -4,6 +4,7 @@ export interface CloudPreferences {
   zones: string[];
   use24h: boolean;
   sortEastToWest: boolean;
+  showRelativeTime?: boolean;
   theme: "dark" | "light" | "system";
   updatedAt: string;
 }

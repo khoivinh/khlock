@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { fetchPreferences, savePreferences } from "@/lib/api";
+import { fetchPreferences, savePreferences, type CloudPreferences } from "@/lib/api";
 
 export type SyncStatus = "idle" | "syncing" | "synced" | "offline" | "error";
 
@@ -8,6 +8,7 @@ export interface SyncablePreferences {
   zones: string[];
   use24h: boolean;
   sortEastToWest: boolean;
+  showRelativeTime: boolean;
   theme: "light" | "dark" | "system";
 }
 
@@ -18,7 +19,7 @@ interface UseCloudSyncOptions {
 
 const DEBOUNCE_MS = 1500;
 
-function mergePreferences(local: SyncablePreferences, cloud: SyncablePreferences): SyncablePreferences {
+function mergePreferences(local: SyncablePreferences, cloud: Omit<CloudPreferences, "updatedAt">): SyncablePreferences {
   // Union zones: cloud order first, then local-only zones appended, deduped, capped at 16
   const seen = new Set<string>();
   const merged: string[] = [];
@@ -33,6 +34,7 @@ function mergePreferences(local: SyncablePreferences, cloud: SyncablePreferences
     zones: merged.slice(0, 16),
     use24h: cloud.use24h,
     sortEastToWest: cloud.sortEastToWest,
+    showRelativeTime: cloud.showRelativeTime ?? false,
     theme: cloud.theme,
   };
 }
@@ -82,6 +84,7 @@ function useCloudSyncWithAuth({ preferences, setPreferences }: UseCloudSyncOptio
           const zonesChanged = merged.zones.join(",") !== current.zones.join(",");
           const settingsChanged = merged.use24h !== current.use24h
             || merged.sortEastToWest !== current.sortEastToWest
+            || merged.showRelativeTime !== current.showRelativeTime
             || merged.theme !== current.theme;
           if (zonesChanged || settingsChanged) {
             setPreferences(merged);
@@ -105,7 +108,7 @@ function useCloudSyncWithAuth({ preferences, setPreferences }: UseCloudSyncOptio
   }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced save on preference changes
-  const prefsKey = `${preferences.zones.join(",")}|${preferences.use24h}|${preferences.sortEastToWest}|${preferences.theme}`;
+  const prefsKey = `${preferences.zones.join(",")}|${preferences.use24h}|${preferences.sortEastToWest}|${preferences.showRelativeTime}|${preferences.theme}`;
 
   useEffect(() => {
     if (!isSignedIn || isMergingRef.current) return;

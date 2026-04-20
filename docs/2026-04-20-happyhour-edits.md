@@ -1,4 +1,4 @@
-# 2026-04-20-khlock-edits
+# 2026-04-20-happyhour-edits
 1. **Branding**
    1. We have a new brand name for this project: Happyhour
       1. Make a plan to change this everywhere in local directories, code, GitHub, repo, on Cloudflare etc.

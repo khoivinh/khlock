@@ -1,13 +1,15 @@
-# Khlock — Product Requirements Document
+# Happyhour — Product Requirements Document
 
 ## Context
 
-Khlock is a world clock and timezone converter web app (React/TypeScript/Tailwind, deployed on Cloudflare Pages). Phases 1-2 (codebase cleanup, deployment, mobile UX fixes) are complete. The scroll-driven header animation is confirmed smooth. This PRD covers two tracks:
+Happyhour (formerly Khlock) is a world clock and timezone converter web app (React/TypeScript/Tailwind, deployed on Cloudflare Pages at `happyhour.day`). Phases 1-2 (codebase cleanup, deployment, mobile UX fixes) are complete. The scroll-driven header animation is confirmed smooth. This PRD covers two tracks:
 
 1. **Phase 3: UI Revisions + Cloud Sync** — revise clock tile interactions, hero clock, city menu, drag-and-drop, and add user accounts with cloud-synced preferences
 2. **iOS Native App** — SwiftUI app with feature parity + home/lock screen widgets + cloud sync
 
 **Status (2026-03-26):** Most Track 1 UI revisions are complete. Cloud sync (Clerk auth + Cloudflare Worker + D1) shipped 2026-03-25 using the Clerk dev instance (production instance requires a custom domain — see Backlog). Relative time offset feature and AM/PM sizing shipped 2026-03-26. Cross-device sync bug fixed 2026-03-26 — replaced union merge with cloud-wins strategy plus timestamp guard to prevent deleted zones from resurrecting on other devices. App rename voting form created via Google Forms. Several bug fixes and polish items remain before Track 1 is complete.
+
+**Status (2026-04-20):** Full rebrand to Happyhour shipped — new domain `happyhour.day`, favicon, OpenGraph image, header logo, Happy Mode theme (rich yellow), production Clerk instance on `clerk.happyhour.day`. Five UX enhancements + five bug fixes also shipped (scroll-to-current-city on edit, shadcn Dialog for tile removal, removal fade animation, closest-city via browser geolocation, visibility/focus listeners for idle recovery, etc.). See `docs/2026-04-20-devlog.md`.
 
 ---
 
@@ -18,7 +20,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 
 ### Scope: "Reset Time" Button (replaces "Show Live Time")
 **Files:** `client/src/pages/world-clock.tsx`, `client/src/components/digital-clock.tsx`
-**Figma:** [Hero Clock component (node 70:1954)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=70-1954)
+**Figma:** [Hero Clock component (node 70:1954)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=70-1954)
 
 - [x] Remove the blue filled "Show Live Time" button from the sticky header
 - [x] Add a "RESET TIME" text link in the hero clock's zone/temp row, right-aligned
@@ -30,7 +32,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 
 ### Scope: Add Cities Menu Redesign
 **Files:** `client/src/components/time-zone-converter.tsx`
-**Figma:** [Add Time Zone section (node 36:3207)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=36-3207)
+**Figma:** [Add Time Zone section (node 36:3207)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=36-3207)
 
 - [x] Widen the Add Cities menu to span the full body column width (896px desktop, 327px mobile)
 - [ ] Menu overlays clock tiles below (does not push content down) — *currently pushes content down*
@@ -56,7 +58,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 
 ### Scope: Next Day / Prev Day Badge
 **Files:** `client/src/components/digital-clock.tsx`
-**Figma:** [Tile Zone and Temp component (node 27:973)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=27-973)
+**Figma:** [Tile Zone and Temp component (node 27:973)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=27-973)
 
 - [x] Add an inline badge next to the GMT offset when the displayed time falls on a different calendar day than the hero clock's time
   - "NEXT DAY" if the tile's date is ahead of the hero's date
@@ -70,7 +72,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 
 ### Scope: Drag-and-Drop Revisions
 **Files:** `client/src/components/time-zone-converter.tsx`, `client/src/components/digital-clock.tsx`
-**Figma:** [Desktop Drag Tile frame (node 4:2)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=4-2), [Clock Tile states (node 17:2410)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=17-2410)
+**Figma:** [Desktop Drag Tile frame (node 4:2)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=4-2), [Clock Tile states (node 17:2410)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=17-2410)
 
 - [x] Blue drop indicator always appears to the LEFT of the destination spot
   - Width: 4px, color: `#3c83f6`, border radius: 4px, full height of tile
@@ -89,7 +91,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 
 ### Scope: Clock Tile Design Refinements
 **Files:** `client/src/components/digital-clock.tsx`, `client/src/index.css`
-**Figma:** [Clock Tile states (node 17:2410)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=17-2410)
+**Figma:** [Clock Tile states (node 17:2410)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=17-2410)
 
 - [x] Tile states from Figma:
   - **Default:** white background
@@ -105,7 +107,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 
 ### Scope: Sidebar Menu *(added post-PRD, implemented 2026-03-21)*
 **Files:** `client/src/components/sidebar.tsx`, `client/src/pages/world-clock.tsx`
-**Figma:** [Sidebar section (node 114:1302)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=114-1302)
+**Figma:** [Sidebar section (node 114:1302)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=114-1302)
 
 - [x] Sidebar slides in from the right, overlays the body
 - [x] Contains: 24-hour clock toggle, east-to-west sort toggle, appearance mode (light/dark/system)
@@ -132,13 +134,13 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 
 ### Scope: User Name Display Redesign
 **Files:** `client/src/components/sidebar.tsx`
-**Figma:** [Sidebar user display (node 114:1557)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=114-1557)
+**Figma:** [Sidebar user display (node 114:1557)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=114-1557)
 
 - [ ] Update signed-in user display in sidebar to match Figma component
 
 ### Scope: Relative Time Offset
 **Files:** `client/src/components/digital-clock.tsx`, `client/src/components/sidebar.tsx`, `client/src/pages/world-clock.tsx`
-**Figma:** [Tile with relative time (node 158:1840)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Khlock-Design?node-id=158-1840)
+**Figma:** [Tile with relative time (node 158:1840)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=158-1840)
 
 - [x] Add "Show Relative Time" toggle in sidebar (default OFF), synced to cloud
 - [x] When enabled, display offset relative to hero zone in format "+1HR" or "-7HR" in the zone/temp row
@@ -209,26 +211,26 @@ Build a native SwiftUI iOS app with full feature parity to the web app, plus hom
 
 ### Project Structure (Proposed)
 ```
-Khlock/
-├── KhlockApp/
-│   ├── App/                    # App entry, navigation
-│   ├── Models/                 # City, Clock, Weather models
+Happyhour/
+├── HappyhourApp/
+│   ├── App/                       # App entry, navigation
+│   ├── Models/                    # City, Clock, Weather models
 │   ├── Views/
-│   │   ├── WorldClockView      # Main screen
-│   │   ├── ClockTileView       # Individual clock tile
-│   │   ├── HeroClockView       # Large hero clock
-│   │   └── CitySearchView      # City search/add
-│   ├── ViewModels/             # ObservableObject view models
+│   │   ├── WorldClockView         # Main screen
+│   │   ├── ClockTileView          # Individual clock tile
+│   │   ├── HeroClockView          # Large hero clock
+│   │   └── CitySearchView         # City search/add
+│   ├── ViewModels/                # ObservableObject view models
 │   ├── Services/
-│   │   ├── WeatherService      # Open-Meteo API client
-│   │   ├── SyncService         # Cloudflare Workers API client for preference sync
-│   │   └── CityDatabase        # City lookup & search
+│   │   ├── WeatherService         # Open-Meteo API client
+│   │   ├── SyncService            # Cloudflare Workers API client for preference sync
+│   │   └── CityDatabase           # City lookup & search
 │   └── Resources/
-│       └── cities.json         # Bundled city database
-├── KhlockWidgets/
-│   ├── KhlockWidgets.swift     # Widget bundle
-│   ├── HomeScreenWidget.swift  # Small/Medium/Large
-│   └── LockScreenWidget.swift  # Inline/Circular/Rectangular
+│       └── cities.json            # Bundled city database
+├── HappyhourWidgets/
+│   ├── HappyhourWidgets.swift     # Widget bundle
+│   ├── HomeScreenWidget.swift     # Small/Medium/Large
+│   └── LockScreenWidget.swift     # Inline/Circular/Rectangular
 └── Shared/
     └── Models/                 # Shared between app & widgets
 ```
@@ -255,7 +257,7 @@ Khlock/
 - Verify ellipsis icon opens native confirm dialog and removes tile on confirmation
 - Verify sidebar: opens/closes smoothly, toggles work, body scroll locked when open
 - Verify duplicate city change swaps tiles instead of crashing
-- Deploy to https://khlock.pages.dev/ and test on real device
+- Deploy to https://happyhour.day/ and test on real device
 
 ### iOS (Track 2)
 - Run in Xcode Simulator (iPhone 15 Pro, iPhone SE)
@@ -291,35 +293,36 @@ Khlock/
 ## App Rename
 
 ### Status
-Evaluating name candidates. Voting form sent to friends and family (2026-03-26). No final decision yet.
+**Completed 2026-04-20** — renamed to **Happyhour**, live at `https://happyhour.day`. The voting poll below captures the pre-rename deliberation; see `docs/2026-04-20-devlog.md` and the related edit-spec for the execution narrative.
 
-### Candidates (voting shortlist)
+### Candidates (voting shortlist, historical)
 
 | # | Name | Notes |
 |---|------|-------|
 | 1 | **Goldenhour** | Evocative, warm. |
 | 2 | **Tymely** | Readable misspelling, very ownable. |
-| 3 | **Khlock** | Current name. Personal, punny. |
+| 3 | **Khlock** | Previous name. Personal, punny. |
 | 4 | **Hi Time** | Friendlier, greeting-like. Two words. |
 
-**Voting form:** [Google Form](https://docs.google.com/forms/d/e/1FAIpQLSeFXrJK7ZmhkvJWb3JVxmoJP2Y5ZYrOqgwrDzH5VlxiLcvmFQ/viewform) — rate each name 1-5, suggest alternatives, provide app feedback. Voters directed to try the app at https://khlock.pages.dev first.
+**Voting form:** [Google Form](https://docs.google.com/forms/d/e/1FAIpQLSeFXrJK7ZmhkvJWb3JVxmoJP2Y5ZYrOqgwrDzH5VlxiLcvmFQ/viewform) — rated each name 1-5. Poll results captured in `docs/2026-03-27-naming-poll-results.md`.
 
 ### Eliminated candidates
 - Goldnhour, Timly, Hightime — removed from shortlist 2026-03-26
 
-### Changes Required Once Name Is Decided
+### Changes Required (completed 2026-04-20)
 
-- [ ] Register domain (e.g., `<name>.app` or `<name>.com`)
-- [ ] Rename GitHub repository
-- [ ] Update `package.json` name field
-- [ ] Update heading text in `client/src/components/` (header renders "Khlock")
-- [ ] Update Clerk app name
-- [ ] Update Cloudflare Pages project name and custom domain
-- [ ] Update Worker CORS allowed origins
-- [ ] Update `<title>` and meta tags in `index.html`
-- [ ] Update Open Graph / social preview metadata
-- [ ] Update iOS app target name and bundle identifier (Track 2)
-- [ ] Update all docs (PRD, CLAUDE.md, devlogs) to use new name
+- [x] Register domain — `happyhour.day` on Namecheap
+- [ ] Rename GitHub repository — *pending (Phase B.1)*
+- [x] Update `package.json` name field
+- [x] Update heading text in `client/src/components/` (header renders brand wordmark + smiley logo)
+- [x] Update Clerk app (production instance on `clerk.happyhour.day`)
+- [ ] Rename Cloudflare Pages project — *not supported in-place; left as `khlock` since it's internal-only now*
+- [x] Custom domain on Pages (`happyhour.day` + `www.happyhour.day` redirect)
+- [x] Update Worker CORS allowed origins (`happyhour.day` added; `khlock.pages.dev` retained as transitional fallback)
+- [x] Update `<title>` and meta tags in `index.html`
+- [x] Open Graph / social preview metadata (new `og.png`, favicon, og:* + twitter:* tags)
+- [ ] Update iOS app target name and bundle identifier (Track 2) — *deferred; iOS app not yet started*
+- [x] Update all docs (PRD, CLAUDE.md, devlogs) to use new name
 
 ---
 
@@ -334,7 +337,7 @@ Evaluating name candidates. Voting form sent to friends and family (2026-03-26).
 
 ## Appendix A: How the Database Works
 
-Khlock stores user settings (which cities are added, 24h mode, theme, etc.) in two places that work together.
+Happyhour stores user settings (which cities are added, 24h mode, theme, etc.) in two places that work together.
 
 ### The Two-Layer System
 
@@ -347,7 +350,7 @@ Khlock stores user settings (which cities are added, 24h mode, theme, etc.) in t
 
 Every time a user adds a city, toggles 24h mode, or changes the theme, the app saves that immediately to the browser's local storage. This is what makes the app work without an account — no sign-in needed, no network required.
 
-**Storage keys** (all prefixed `world-khlock-`):
+**Storage keys** (all prefixed `world-happyhour-`):
 
 | Key | What it stores |
 |-----|---------------|
@@ -360,7 +363,7 @@ Every time a user adds a city, toggles 24h mode, or changes the theme, the app s
 | `sync-at` | Timestamp of last successful cloud sync |
 
 **Limitations:**
-- Tied to one browser on one device — opening Khlock on another device won't have these cities
+- Tied to one browser on one device — opening Happyhour on another device won't have these cities
 - Cleared if the user clears browser data
 - No backup or history
 

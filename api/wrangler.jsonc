@@ -11,6 +11,6 @@
   ],
   "vars": {
     "CLERK_JWKS_URL": "https://topical-dragon-37.clerk.accounts.dev/.well-known/jwks.json",
-    "ALLOWED_ORIGINS": "https://khlock.pages.dev,http://localhost:5173,http://localhost:5174,http://localhost:5175"
+    "ALLOWED_ORIGINS": "https://happyhour.day,https://khlock.pages.dev,http://localhost:5173,http://localhost:5174,http://localhost:5175"
   }
 }

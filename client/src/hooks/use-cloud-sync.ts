@@ -9,7 +9,7 @@ export interface SyncablePreferences {
   use24h: boolean;
   sortEastToWest: boolean;
   showRelativeTime: boolean;
-  theme: "light" | "dark" | "system";
+  theme: "light" | "dark" | "happy" | "system";
 }
 
 interface UseCloudSyncOptions {
@@ -18,8 +18,8 @@ interface UseCloudSyncOptions {
 }
 
 const DEBOUNCE_MS = 1500;
-const SYNC_SNAPSHOT_KEY = "world-khlock-sync-snapshot";
-const SYNC_TIMESTAMP_KEY = "world-khlock-sync-at";
+const SYNC_SNAPSHOT_KEY = "world-happyhour-sync-snapshot";
+const SYNC_TIMESTAMP_KEY = "world-happyhour-sync-at";
 
 function cloudToLocal(cloud: Omit<CloudPreferences, "updatedAt">): SyncablePreferences {
   return {

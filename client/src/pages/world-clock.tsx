@@ -5,6 +5,7 @@ import { getCityByKey } from "@/lib/city-lookup";
 import { useCloudSync } from "@/hooks/use-cloud-sync";
 import { useTheme } from "@/lib/theme-provider";
 import { initZonesFromStorage } from "@/components/time-zone-converter";
+import { HappyhourLogo } from "@/components/icons/happyhour-logo";
 
 // Header animation constants
 const SCROLL_RANGE = 120; // px of scroll over which the shrink fully plays out
@@ -13,10 +14,10 @@ const PY_END = 12;        // py-3 = 0.75rem = 12px
 const FS_START = 48;      // text-5xl = 3rem = 48px
 const FS_END = 30;        // text-3xl = 1.875rem = 30px
 
-const USE_24H_KEY = "world-khlock-24h";
-const SORT_ETW_KEY = "world-khlock-sort-etw";
-const ZONES_KEY = "world-khlock-zones";
-const SHOW_REL_TIME_KEY = "world-khlock-rel-time";
+const USE_24H_KEY = "world-happyhour-24h";
+const SORT_ETW_KEY = "world-happyhour-sort-etw";
+const ZONES_KEY = "world-happyhour-zones";
+const SHOW_REL_TIME_KEY = "world-happyhour-rel-time";
 
 export default function WorldClock() {
   const [isCustomMode, setIsCustomMode] = useState(false);
@@ -86,9 +87,9 @@ export default function WorldClock() {
       use24h: use24Hour,
       sortEastToWest,
       showRelativeTime,
-      theme: theme as "light" | "dark" | "system",
+      theme: theme as "light" | "dark" | "happy" | "system",
     },
-    setPreferences: useCallback((prefs: { zones: string[]; use24h: boolean; sortEastToWest: boolean; showRelativeTime: boolean; theme: "light" | "dark" | "system" }) => {
+    setPreferences: useCallback((prefs: { zones: string[]; use24h: boolean; sortEastToWest: boolean; showRelativeTime: boolean; theme: "light" | "dark" | "happy" | "system" }) => {
       setSelectedZones(prefs.zones);
       setUse24Hour(prefs.use24h);
       setSortEastToWest(prefs.sortEastToWest);
@@ -126,10 +127,11 @@ export default function WorldClock() {
         <div className="mx-auto max-w-4xl flex flex-row items-start justify-between gap-4 pl-[10px] pr-[10px]">
           <h1
             ref={h1Ref}
-            className="font-display font-black tracking-tight text-foreground text-5xl"
+            className="font-display font-black tracking-tight text-foreground text-5xl flex items-center gap-[0.3em]"
             data-testid="text-app-title"
           >
-            Khlock
+            <HappyhourLogo className="w-[0.95em] h-[0.95em] shrink-0" />
+            <span>Happyhour</span>
           </h1>
           <button
             ref={toggleRef}

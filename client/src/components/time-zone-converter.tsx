@@ -24,6 +24,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { getAllCities, getCityByKey, searchCities, getTimeInCityZone, formatCityDisplay, formatCityDetail, loadCities, areCitiesLoaded } from "@/lib/city-lookup";
+import { resolveLocalCity } from "@/lib/closest-city";
 
 // Track recent touch events so we can suppress synthetic mouse events on mobile.
 // Browsers fire mousedown ~0-100ms after touchstart; if MouseSensor activates on
@@ -177,7 +178,7 @@ function SortableClockItem({
 }
 
 const MAX_CLOCKS = 16;
-const STORAGE_KEY = "world-khlock-zones";
+const STORAGE_KEY = "world-happyhour-zones";
 
 function detectLocalCity(): string {
   try {
@@ -192,7 +193,7 @@ function detectLocalCity(): string {
 function migrateOldKeys(keys: string[]): string[] {
   const oldToNew: Record<string, string> = {
     "paris": "paris_FR",
-    "newYork": "newYork_US",
+    "newYork": "newYorkCity_US",
     "losAngeles": "losAngeles_US",
     "london": "london_GB",
     "tokyo": "tokyo_JP",
@@ -211,7 +212,13 @@ function migrateOldKeys(keys: string[]): string[] {
     "istanbul": "istanbul_TR",
   };
 
+  // Fix keys that were incorrectly migrated in a previous version
+  const brokenKeys: Record<string, string> = {
+    "newYork_US": "newYorkCity_US",
+  };
+
   const migrated = keys.map(key => {
+    if (brokenKeys[key]) return brokenKeys[key];
     if (key.includes("_")) return key;
     return oldToNew[key] || key;
   });
@@ -221,7 +228,7 @@ function migrateOldKeys(keys: string[]): string[] {
   return migrated.filter(key => getCityByKey(key) !== undefined);
 }
 
-const DEFAULT_ZONES = ["paris_FR", "newYork_US", "losAngeles_US"];
+const DEFAULT_ZONES = ["tokyo_JP", "newYorkCity_US", "paris_FR"];
 
 export function initZonesFromStorage(): string[] {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -273,7 +280,13 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   useEffect(() => {
     loadCities().then(() => {
       setCitiesLoaded(true);
-      setHeroZone(detectLocalCity());
+      const tzFallback = detectLocalCity();
+      setHeroZone(tzFallback);
+      // Upgrade the hero clock to the geographically-closest city once geolocation resolves.
+      // Silent — on denial/error we keep the timezone-derived fallback.
+      resolveLocalCity(tzFallback).then((key) => {
+        setHeroZone((current) => (current === tzFallback ? key : current));
+      });
     });
   }, []);
 
@@ -320,6 +333,23 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
 
     return () => clearInterval(interval);
   }, [isCustomMode, activeId]);
+
+  // Force-refresh time when the tab resumes from background: some browsers throttle
+  // setInterval aggressively (or discard the tab), leaving the clock stuck on stale data.
+  useEffect(() => {
+    if (isCustomMode) return;
+    function refreshNow() {
+      if (document.visibilityState === "visible") {
+        setCurrentTime(new Date());
+      }
+    }
+    document.addEventListener("visibilitychange", refreshNow);
+    window.addEventListener("focus", refreshNow);
+    return () => {
+      document.removeEventListener("visibilitychange", refreshNow);
+      window.removeEventListener("focus", refreshNow);
+    };
+  }, [isCustomMode]);
 
   const handleZoneChange = useCallback((index: number, zoneKey: string) => {
     onZonesChange((prev: string[]) => {
@@ -518,6 +548,11 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
                   placeholder="Search cities..."
                   value={addZoneSearchQuery}
                   onValueChange={setAddZoneSearchQuery}
+                  onKeyDown={(e) => {
+                    if (e.key === " ") {
+                      e.stopPropagation();
+                    }
+                  }}
                   autoFocus
                   data-testid="input-add-zone-search"
                 />

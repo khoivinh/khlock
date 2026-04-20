@@ -1,8 +1,16 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { GripVertical, Check, ChevronsUpDown } from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getCityByKey, searchCities, formatCityDetail, type TimezoneOption } from "@/lib/city-lookup";
 import { useWeather, getTemperatureColor } from "@/hooks/use-weather";
@@ -63,7 +71,28 @@ function CitySelector({
   const [searchValue, setSearchValue] = useState("");
 
   const selectedCity = getCityByKey(selectedCityKey);
-  const filteredCities = searchCities(searchValue, 100);
+
+  // When no search is active, ensure the selected city is present so the scroll-to-current
+  // effect below can find and center it (cities list is truncated to 100 by default).
+  const filteredCities = useMemo(() => {
+    const base = searchCities(searchValue, 100);
+    if (!searchValue.trim() && selectedCity && !base.some((c) => c.key === selectedCityKey)) {
+      return [selectedCity, ...base];
+    }
+    return base;
+  }, [searchValue, selectedCity, selectedCityKey]);
+
+  // Scroll selected city into view when popover opens.
+  useEffect(() => {
+    if (!open || !selectedCityKey) return;
+    const raf = requestAnimationFrame(() => {
+      const item = document.querySelector<HTMLElement>(
+        `[data-testid="city-option-${selectedCityKey}"]`
+      );
+      item?.scrollIntoView({ block: "center" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open, selectedCityKey]);
 
   return (
     <Popover
@@ -83,12 +112,17 @@ function CitySelector({
           <ChevronsUpDown className="h-3 w-3 opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start" collisionPadding={20}>
+      <PopoverContent className="w-[280px] p-0 z-[60]" align="start" collisionPadding={20}>
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search cities..."
             value={searchValue}
             onValueChange={setSearchValue}
+            onKeyDown={(e) => {
+              if (e.key === " ") {
+                e.stopPropagation();
+              }
+            }}
             data-testid="input-city-search"
           />
           <CommandList>
@@ -197,6 +231,8 @@ export function DigitalClock({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTime, setEditTime] = useState("");
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
   const editContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch weather data for this timezone
@@ -231,9 +267,20 @@ export function DigitalClock({
   }, [isEditing]);
 
   function handleRemoveWithConfirm() {
-    if (onRemove && confirm(`Remove ${cityName}?`)) {
-      onRemove();
+    if (onRemove) {
+      setShowRemoveDialog(true);
     }
+  }
+
+  function handleConfirmRemove() {
+    setShowRemoveDialog(false);
+    setIsRemoving(true);
+    // Match the animation duration below. Kept as a setTimeout (rather than onAnimationEnd)
+    // because the animation classes apply to the outer wrapper and onAnimationEnd can
+    // fire from nested animated children.
+    window.setTimeout(() => {
+      onRemove?.();
+    }, 800);
   }
 
   const dayIndicator = !isHero ? getDayIndicator(time, heroDate) : null;
@@ -327,8 +374,10 @@ export function DigitalClock({
 
   // Grid layout (only layout now)
   return (
+    <>
     <div
       className={`relative rounded-[15px] px-2.5 pt-[15px] pb-5
+      ${isRemoving ? "animate-out fade-out-0 zoom-out-95 [animation-duration:800ms] pointer-events-none" : ""}
       ${isDragActive ? "transition-none" : "transition-[background-color,box-shadow] duration-300 ease-out"}
       ${
         isBeingDragged
@@ -429,10 +478,10 @@ export function DigitalClock({
               <p className={`mt-[10px] text-xs text-muted-foreground flex items-center ${(relativeOffset !== undefined || dayIndicator) ? "gap-[6px]" : "gap-[10px]"}`}>
                 <span>{timezone}</span>
                 {(relativeOffset !== undefined || dayIndicator) && (
-                  <span className="inline-flex items-center justify-center px-[5px] gap-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px] whitespace-nowrap shrink-0">
-                    {relativeOffset !== undefined && <span className="tracking-[0.1em]">{formatRelativeOffset(relativeOffset)}</span>}
+                  <span className="inline-flex items-center justify-center px-[5px] gap-[5px] border border-[#6b7280] rounded-[3px] text-[8px] font-semibold uppercase text-[#6b7280] leading-[16px] whitespace-nowrap shrink-0">
+                    {relativeOffset !== undefined && <span>{formatRelativeOffset(relativeOffset)}</span>}
                     {relativeOffset !== undefined && dayIndicator && <span className="bg-[#6b7280] self-stretch w-px shrink-0" />}
-                    {dayIndicator && <span>{dayIndicator === "next" ? "Next Day" : "Prev Day"}</span>}
+                    {dayIndicator && <span className="tracking-[0.2px]">{dayIndicator === "next" ? "Next Day" : "Prev Day"}</span>}
                   </span>
                 )}
                 {!isCustomMode && weather && (
@@ -470,10 +519,10 @@ export function DigitalClock({
             <p className={`text-xs text-muted-foreground sm:hidden flex items-center flex-wrap ${(relativeOffset !== undefined || dayIndicator) ? "gap-[6px]" : "gap-[10px]"}`}>
               <span>{timezone}</span>
               {(relativeOffset !== undefined || dayIndicator) && (
-                <span className="inline-flex items-center justify-center px-[5px] gap-[5px] border border-[#6b7280] rounded-[3px] text-[7px] font-bold uppercase text-[#6b7280] leading-[15px] whitespace-nowrap shrink-0">
-                  {relativeOffset !== undefined && <span className="tracking-[0.1em]">{formatRelativeOffset(relativeOffset)}</span>}
+                <span className="inline-flex items-center justify-center px-[5px] gap-[5px] border border-[#6b7280] rounded-[3px] text-[8px] font-semibold uppercase text-[#6b7280] leading-[16px] whitespace-nowrap shrink-0">
+                  {relativeOffset !== undefined && <span>{formatRelativeOffset(relativeOffset)}</span>}
                   {relativeOffset !== undefined && dayIndicator && <span className="bg-[#6b7280] self-stretch w-px shrink-0" />}
-                  {dayIndicator && <span>{dayIndicator === "next" ? "Next Day" : "Prev Day"}</span>}
+                  {dayIndicator && <span className="tracking-[0.2px]">{dayIndicator === "next" ? "Next Day" : "Prev Day"}</span>}
                 </span>
               )}
               {!isCustomMode && weather && (
@@ -502,5 +551,35 @@ export function DigitalClock({
         )}
       </div>
     </div>
+    <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Happyhour</DialogTitle>
+          <DialogDescription>
+            Remove {cityName}?
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <button
+            type="button"
+            onClick={() => setShowRemoveDialog(false)}
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            data-testid="button-remove-cancel"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmRemove}
+            autoFocus
+            className="inline-flex items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 transition-colors"
+            data-testid="button-remove-confirm"
+          >
+            Remove
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

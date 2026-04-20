@@ -5,7 +5,7 @@ export interface CloudPreferences {
   use24h: boolean;
   sortEastToWest: boolean;
   showRelativeTime?: boolean;
-  theme: "dark" | "light" | "system";
+  theme: "dark" | "light" | "happy" | "system";
   updatedAt: string;
 }
 

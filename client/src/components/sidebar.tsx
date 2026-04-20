@@ -3,6 +3,9 @@ import { Monitor, Smartphone, Sun, Moon, Check, Loader2, CloudOff, AlertCircle }
 import { SignInButton, SignOutButton, useUser, useAuth } from "@clerk/clerk-react";
 import { useTheme } from "@/lib/theme-provider";
 import type { SyncStatus } from "@/hooks/use-cloud-sync";
+import { DrawerOpenIcon } from "@/components/icons/drawer-open";
+import { DrawerClosedIcon } from "@/components/icons/drawer-closed";
+import { HappyhourLogo } from "@/components/icons/happyhour-logo";
 
 const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -35,23 +38,7 @@ function ToggleSwitch({ checked, onChange }: ToggleSwitchProps) {
 }
 
 function DrawerToggleIcon({ open }: { open: boolean }) {
-  if (open) {
-    // Opened state: lines with right-pointing collapse indicator
-    return (
-      <svg width="24" height="20" viewBox="0 0 24 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="0.5" y="0.5" width="23" height="19" rx="2.5" stroke="currentColor" />
-        <line x1="16" y1="0.5" x2="16" y2="19.5" stroke="currentColor" />
-        <path d="M6.75 7L9.25 10L6.75 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  // Closed state: simple sidebar icon
-  return (
-    <svg width="24" height="20" viewBox="0 0 24 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0.5" y="0.5" width="23" height="19" rx="2.5" stroke="currentColor" />
-      <line x1="16" y1="0.5" x2="16" y2="19.5" stroke="currentColor" />
-    </svg>
-  );
+  return open ? <DrawerOpenIcon /> : <DrawerClosedIcon />;
 }
 
 function SyncStatusIndicator({ status }: { status: SyncStatus }) {
@@ -217,6 +204,8 @@ export function Sidebar({
       setTheme("light");
     } else if (theme === "light") {
       setTheme("dark");
+    } else if (theme === "dark") {
+      setTheme("happy");
     } else {
       setTheme("system");
     }
@@ -230,13 +219,15 @@ export function Sidebar({
         : <Monitor className="h-[24px] w-[24px]" />;
     }
     if (theme === "light") return <Sun className="h-[24px] w-[24px]" />;
-    return <Moon className="h-[24px] w-[24px]" />;
+    if (theme === "dark") return <Moon className="h-[24px] w-[24px]" />;
+    return <HappyhourLogo className="h-[24px] w-[24px]" />;
   }
 
   function getThemeLabel() {
     if (theme === "system") return "System";
     if (theme === "light") return "Light";
-    return "Dark";
+    if (theme === "dark") return "Dark";
+    return "Happy";
   }
 
   return (
@@ -285,7 +276,7 @@ export function Sidebar({
             </div>
             <button
               onClick={onClose}
-              className="shrink-0 w-[24px] h-[20px] text-[#efefef] hover:text-white transition-colors mt-[2px]"
+              className="shrink-0 w-[25px] h-[20px] text-[#efefef] hover:text-white transition-colors"
               aria-label="Close sidebar"
             >
               <DrawerToggleIcon open={true} />

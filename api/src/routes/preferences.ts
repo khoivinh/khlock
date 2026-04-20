@@ -16,7 +16,7 @@ interface PreferencesBody {
   theme: string;
 }
 
-const VALID_THEMES = ["light", "dark", "system"];
+const VALID_THEMES = ["light", "dark", "happy", "system"];
 const MAX_ZONES = 16;
 
 function rowToJson(row: PreferencesRow) {

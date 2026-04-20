@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "dark" | "light" | "system";
+type Theme = "dark" | "light" | "happy" | "system";
+type ResolvedTheme = "dark" | "light" | "happy";
 
 type ThemeProviderContextType = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  resolvedTheme: "dark" | "light";
+  resolvedTheme: ResolvedTheme;
 };
 
 const ThemeProviderContext = createContext<ThemeProviderContextType | undefined>(undefined);
@@ -13,7 +14,7 @@ const ThemeProviderContext = createContext<ThemeProviderContextType | undefined>
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "world-khlock-theme",
+  storageKey = "world-happyhour-theme",
 }: {
   children: React.ReactNode;
   defaultTheme?: Theme;
@@ -23,13 +24,13 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
-  const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("light");
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
+    root.classList.remove("light", "dark", "happy");
 
-    let resolved: "dark" | "light";
+    let resolved: ResolvedTheme;
     if (theme === "system") {
       resolved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     } else {
@@ -45,7 +46,7 @@ export function ThemeProvider({
     const handleChange = () => {
       if (theme === "system") {
         const root = window.document.documentElement;
-        root.classList.remove("light", "dark");
+        root.classList.remove("light", "dark", "happy");
         const resolved = mediaQuery.matches ? "dark" : "light";
         root.classList.add(resolved);
         setResolvedTheme(resolved);

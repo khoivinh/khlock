@@ -11,6 +11,8 @@ Happyhour (formerly Khlock) is a world clock and timezone converter web app (Rea
 
 **Status (2026-04-20):** Full rebrand to Happyhour shipped — new domain `happyhour.day`, favicon, OpenGraph image, header logo, Happy Mode theme (rich yellow), production Clerk instance on `clerk.happyhour.day`. Five UX enhancements + five bug fixes also shipped (scroll-to-current-city on edit, shadcn Dialog for tile removal, removal fade animation, closest-city via browser geolocation, visibility/focus listeners for idle recovery, etc.). See `docs/2026-04-20-devlog.md`.
 
+**Status (2026-04-21):** New outlined wordmark + Happy Mode sidebar icon shipped; Happy Mode promoted to a first-class appearance option alongside light/dark/system. City-loading performance reworked into three tiers (tile cache, top-500 inline bundle, lazy full dataset). Relative-time cloud sync code-complete — awaiting D1 migration + worker deploy. Error-state design specified (this PRD) covering nine failure surfaces; the top three — weather failure, search no-results, empty state — are the first to implement. See `docs/2026-04-21-devlog.md`.
+
 ---
 
 ## Track 1: UI Revisions + Cloud Sync (Web)
@@ -39,6 +41,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 - [x] On mobile, position the menu near the top of the viewport so the user can see as much of it as possible
 - [x] Keep existing visual style: white background, `#e5e7eb` border, rounded 8px, shadow, search field with magnifying glass icon
 - [x] When a searched city is already displayed, highlight it in the results list; tapping scrolls to and highlights the existing tile — *evolved from original "Already displayed" text approach*
+- [x] Dark-mode border: `#6C6C6C` on the dropdown container
 
 ### Scope: Remove List View Toggle
 **Files:** `client/src/components/time-zone-converter.tsx`, `client/src/components/digital-clock.tsx`
@@ -110,13 +113,14 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 **Figma:** [Sidebar section (node 114:1302)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=114-1302)
 
 - [x] Sidebar slides in from the right, overlays the body
-- [x] Contains: 24-hour clock toggle, east-to-west sort toggle, appearance mode (light/dark/system)
+- [x] Contains: 24-hour clock toggle, east-to-west sort toggle, relative-time toggle, appearance mode (light/dark/system/happy)
 - [x] Full viewport height with ~28px padding top and bottom
 - [x] Full viewport width on mobile
 - [x] Smooth expand/collapse animation; no animation on initial page load
 - [x] Drawer icon position stays consistent between open/closed states
 - [x] Body scroll locked when sidebar is open
 - [x] Account/login UI designed but intentionally non-functional (deferred to cloud sync phase)
+- [x] Copyright footer "©2026 Design Dept Partners LLC" pinned to bottom of the sidebar panel via `mt-auto` ([Figma 114:1557](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=114-1557))
 - [ ] **Bug:** Login button text vertical alignment — text is 1-2px too close to the top
 - [ ] Reduce sidebar height on mobile by ~20% — currently extends below fold when browser address bar is fully shown
 
@@ -126,7 +130,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 
 - [x] Clerk modal login flow (Google + Apple)
 - [x] Cloudflare Worker API: `GET/PUT /api/preferences`, `DELETE /api/account`
-- [x] D1 schema: `user_preferences` table (user_id, zones, use_24h, sort_etw, theme, updated_at)
+- [x] D1 schema: `user_preferences` table (user_id, zones, use_24h, sort_etw, theme, show_rel_time, updated_at) — `show_rel_time` added 2026-04-21 via migration 0002
 - [x] `useCloudSync` hook: fetch on sign-in, debounce-save on change
 - [x] Cross-device sync: cloud-wins strategy with timestamp guard (replaced union merge that resurrected deleted zones)
 - [x] Sidebar: user avatar + name when signed in, sign out button, sync status indicator
@@ -147,8 +151,54 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 - [x] Offset rendered inside a bordered badge; when combined with NEXT/PREV DAY, merged into a single unified badge with vertical divider (e.g. `+13HR | NEXT DAY`) — fixes wrapping bug on mobile
 - [x] AM/PM meridiem indicators rendered at reduced font size for readability (hero: 36/48px, tiles: 16/24px)
 
+### Scope: Header Wordmark + Happy Mode Theme *(shipped 2026-04-21)*
+**Files:** `client/src/components/icons/happyhour-wordmark.tsx`, `client/src/components/icons/happyhour-logo.tsx`, `client/src/components/icons/happy-mode-icon.tsx`, `client/src/pages/world-clock.tsx`, `client/src/components/sidebar.tsx`, `client/src/index.css`
+**Figma:** [Header wordmark (70:2208)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=70-2208), [Dark-mode header (114:1333)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=114-1333), [Happy Mode sidebar (198:1789)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=198-1789), [Mobile header (6:2)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=6-2)
+
+- [x] New outlined wordmark SVG (`HappyhourWordmark`) with fills bound to `currentColor`; logo fixed to 38 px, gap to 10 px
+- [x] Scroll animation interpolates logo + wordmark heights (replaces the prior h1 font-size approach)
+- [x] Mobile (<500 px) scales the wordmark to 73 % per the Figma mobile variant
+- [x] Happy Mode promoted to a first-class theme option — `system → light → dark → happy` cycle in the Appearance control
+- [x] Happy Mode palette: rich yellow (`#FFD900` accent), yellow smiley logo variant, dedicated stroked-smile sidebar icon (`HappyModeIcon`)
+- [x] Happyhour logo canonicalized to yellow circle + black face; `default` and prior `dark` variants collapsed (both render identically) — `happy` variant remains distinct
+- [x] `.happy`-scoped overrides in `index.css` ensure temperature text stays legible against the yellow background
+
+### Scope: City-Loading Performance Tiers *(shipped 2026-04-21)*
+**Files:** `client/src/lib/city-lookup.ts`, `client/src/lib/tile-cache.ts`, `client/src/data/cities-top.json`, `scripts/build-top-cities.mjs`, `client/src/components/time-zone-converter.tsx`, `package.json`
+
+- [x] **Tier 1 — tile cache** (`tile-cache.ts`): persists full `TimezoneOption` metadata per selected zone in `localStorage["happyhour:tile-cache"]`; returning users render tiles synchronously on first paint even for cities outside the top-500
+- [x] **Tier 2 — top-500 inline bundle** (`cities-top.json`, 38.97 KB / 16.63 KB gzip): statically imported via `loadTopCities()`; search dropdown responsive from keystroke 1
+- [x] **Tier 3 — lazy full dataset** (`cities-*.js`, 2.05 MB lazy chunk): loads on `requestIdleCallback` (3 s timeout) OR first open of the Add Time Zone dropdown; `loadCities()` is idempotent
+- [x] Public helper `getCityOrCachedTile(key)` falls through tier 2 → tier 3 → tier 1 cache
+- [x] New npm script `build:top-cities` — re-run when `cities.json` is regenerated from GeoNames
+
 ### Out of Scope (Phase 3)
 - Theme/color palette changes (current palette is close to final)
+
+### Scope: Error States *(design 2026-04-21, implementation pending)*
+
+Inventory of the nine failure surfaces in the app and where each should appear in the UI. Recommendations favor inline, contextual surfaces (tile, dropdown, hero) over modal/banner interrupts — matching Happyhour's minimal aesthetic. Source audit: `docs/2026-04-21-devlog.md` → "Error-state design audit".
+
+| # | Error | UI surface — where it appears | Copy direction | Priority |
+|---|---|---|---|---|
+| 1 | Weather fetch fails | **Inline in the tile's zone/temp row**, replacing the temperature. Neutral `—` glyph with a small `CloudOff` lucide icon; tooltip on hover. If every tile fails in a single session, defer to the global offline banner (#3) rather than stacking tile-level warnings. | Visual `—` + tooltip: `Weather unavailable` | **High** |
+| 2 | City search: no results | **Inside the Add Cities dropdown** — replace the current `CommandEmpty` text. Two-line empty state, same typography as dropdown items, muted color. | Primary: `No cities match "{query}"` · Secondary: `Try a different spelling or a nearby major city.` | **High** (cheap win) |
+| 3 | Offline / no network | **New global banner slot** directly below the sticky header. Full-width, 1 line, muted yellow background aligned with the Happy Mode palette. Auto-dismisses on the `online` event. Driven by `navigator.onLine` + `window.addEventListener('online'/'offline')`. Accessible: `role="status" aria-live="polite"`. Does not block interaction. | `You're offline. Clocks still work; weather and sync will resume automatically.` | **High** |
+| 4 | Empty state (no cities) | **In the tile grid**, render a single dashed-border "Add your first city" ghost tile below the hero. Reuses tile dimensions for visual rhythm; tapping it opens the Add Cities dropdown. Disappears once any city is added. | Title: `Add your first city` · Subtitle: `Track time across any city in the world.` | **High** (onboarding) |
+| 5 | Geolocation denied | **One-time hero caption** — small text under the hero city name, dismissible via `×`. Dismissal persists in `localStorage["happyhour:geo-hint-dismissed"]`. No toast, no modal. | `Using your timezone. Allow location for a closer match.` | **Low** |
+| 6 | Full city DB fails to load | **Footer of the Add Cities dropdown** (below the results list). Tiny muted text. Only renders when `fullState === null && loadAttempted === true`. | `Showing top 500 cities — full list unavailable.` | **Low** |
+| 7 | Cloud sync failure | **Enhance existing `SyncStatusIndicator`** in the sidebar header. Add a small dot indicator (2–3 px, `#ef4444`) on the sidebar drawer-toggle icon when `syncStatus === "error"`, visible without opening the sidebar. Inside the sidebar, add a `Retry` text link next to the status label. Copy stays calm — local storage still works. | Sidebar status: `Sync failed — tap to retry` | **Medium** |
+| 8 | Invalid time input | **Inline on the `type="time"` input** — 1 px red border (`#ef4444`) when `handleUpdateClick` runs with empty/malformed value. OK button becomes disabled (`aria-disabled="true"`, 40 % opacity). No error text; visual cue is sufficient. **Ships with the open clock-edit refactor.** | Visual only | **Medium** (blocked on refactor) |
+| 9 | 404 / unknown route | **Reuse the existing `not-found.tsx` full-page card** but replace the dev-flavored copy ("Did you forget to add the page to the router?") with user-facing text. Add the Happyhour smiley logo above the heading and a "Go to Happyhour" button linking to `/`. | Title: `This page doesn't exist` · Body: `The link might be broken, or the page may have moved.` · Button: `Go to Happyhour` | **High** (polish) |
+
+#### Recommended shipping order
+
+1. **#2 (search no-results)** + **#9 (404 polish)** — copy-only, same-day wins.
+2. **#4 (empty state)** — small new component, onboarding impact.
+3. **#1 (weather tile)** + **#3 (offline banner)** — pair them so global offline takes precedence over N tile-level warnings.
+4. **#7 (sync dot + retry)** — small enhancement to the existing indicator.
+5. **#5, #6** — defer; today's silent fallbacks are already graceful.
+6. **#8** — ships with the clock-edit refactor.
 
 ---
 
@@ -329,9 +379,7 @@ Happyhour/
 ## Backlog
 
 - [ ] Keyboard shortcuts — add clock tiles, tab between clocks, edit custom time, etc.
-- [ ] Sync `rel-time` (relative time offset toggle) to cloud — add column to D1 schema, include in API read/write, sync via `useCloudSync`
 - [ ] Increase zone/temp font size on clock tiles for better readability
-- [ ] Add copyright information and footer to the page
 
 ---
 
@@ -357,7 +405,7 @@ Every time a user adds a city, toggles 24h mode, or changes the theme, the app s
 | `zones` | JSON array of city keys (e.g. `["paris_FR", "newYork_US"]`) |
 | `24h` | Whether 24-hour mode is on |
 | `sort-etw` | Whether east-to-west sorting is on |
-| `theme` | `"light"`, `"dark"`, or `"system"` |
+| `theme` | `"light"`, `"dark"`, `"system"`, or `"happy"` |
 | `rel-time` | Whether relative time offset badges are shown |
 | `sync-snapshot` | Fingerprint of last synced state (for change detection) |
 | `sync-at` | Timestamp of last successful cloud sync |
@@ -373,12 +421,13 @@ When the user signs in via Clerk, the app also syncs preferences to a Cloudflare
 
 ```sql
 CREATE TABLE user_preferences (
-  user_id    TEXT PRIMARY KEY,
-  zones      TEXT NOT NULL,       -- JSON array of city keys
-  use_24h    INTEGER DEFAULT 0,   -- 0 = off, 1 = on
-  sort_etw   INTEGER DEFAULT 0,   -- 0 = off, 1 = on
-  theme      TEXT DEFAULT 'system',
-  updated_at TEXT NOT NULL        -- ISO 8601 timestamp
+  user_id       TEXT PRIMARY KEY,
+  zones         TEXT NOT NULL,       -- JSON array of city keys
+  use_24h       INTEGER DEFAULT 0,   -- 0 = off, 1 = on
+  sort_etw      INTEGER DEFAULT 0,   -- 0 = off, 1 = on
+  theme         TEXT DEFAULT 'system',
+  show_rel_time INTEGER DEFAULT 0,   -- 0 = off, 1 = on (added 2026-04-21 via migration 0002)
+  updated_at    TEXT NOT NULL        -- ISO 8601 timestamp
 );
 ```
 
@@ -412,4 +461,3 @@ The sync hook (`useCloudSync`) tracks state via the `sync-snapshot` fingerprint.
 | Last-write-wins | Conflicting edits from two devices resolve by timestamp, not merge |
 | Single table | Cloud DB stores preferences only — no analytics or usage data |
 | Clerk dependency | Cloud sync requires Clerk auth service to be configured |
-| `rel-time` not synced | Relative time toggle is local-only (not in the D1 schema) |

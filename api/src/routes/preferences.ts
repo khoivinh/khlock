@@ -5,6 +5,7 @@ interface PreferencesRow {
   zones: string;
   use_24h: number;
   sort_etw: number;
+  show_rel_time: number;
   theme: string;
   updated_at: string;
 }
@@ -13,6 +14,7 @@ interface PreferencesBody {
   zones: string[];
   use24h: boolean;
   sortEastToWest: boolean;
+  showRelativeTime: boolean;
   theme: string;
 }
 
@@ -24,6 +26,7 @@ function rowToJson(row: PreferencesRow) {
     zones: JSON.parse(row.zones) as string[],
     use24h: row.use_24h === 1,
     sortEastToWest: row.sort_etw === 1,
+    showRelativeTime: row.show_rel_time === 1,
     theme: row.theme,
     updatedAt: row.updated_at,
   };
@@ -51,6 +54,9 @@ function validateBody(body: unknown): { valid: true; data: PreferencesBody } | {
   if (typeof b.sortEastToWest !== "boolean") {
     return { valid: false, error: "sortEastToWest must be a boolean" };
   }
+  if (typeof b.showRelativeTime !== "boolean") {
+    return { valid: false, error: "showRelativeTime must be a boolean" };
+  }
   if (typeof b.theme !== "string" || !VALID_THEMES.includes(b.theme)) {
     return { valid: false, error: `theme must be one of: ${VALID_THEMES.join(", ")}` };
   }
@@ -61,6 +67,7 @@ function validateBody(body: unknown): { valid: true; data: PreferencesBody } | {
       zones: b.zones as string[],
       use24h: b.use24h as boolean,
       sortEastToWest: b.sortEastToWest as boolean,
+      showRelativeTime: b.showRelativeTime as boolean,
       theme: b.theme as string,
     },
   };
@@ -109,14 +116,15 @@ export async function putPreferences(userId: string, request: Request, env: Env)
   const now = new Date().toISOString();
 
   await env.DB.prepare(
-    `INSERT OR REPLACE INTO user_preferences (user_id, zones, use_24h, sort_etw, theme, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT OR REPLACE INTO user_preferences (user_id, zones, use_24h, sort_etw, show_rel_time, theme, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       userId,
       JSON.stringify(data.zones),
       data.use24h ? 1 : 0,
       data.sortEastToWest ? 1 : 0,
+      data.showRelativeTime ? 1 : 0,
       data.theme,
       now
     )
@@ -127,6 +135,7 @@ export async function putPreferences(userId: string, request: Request, env: Env)
       zones: data.zones,
       use24h: data.use24h,
       sortEastToWest: data.sortEastToWest,
+      showRelativeTime: data.showRelativeTime,
       theme: data.theme,
       updatedAt: now,
     }),

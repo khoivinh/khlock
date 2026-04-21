@@ -26,7 +26,7 @@ function cloudToLocal(cloud: Omit<CloudPreferences, "updatedAt">): SyncablePrefe
     zones: cloud.zones.slice(0, 16),
     use24h: cloud.use24h,
     sortEastToWest: cloud.sortEastToWest,
-    showRelativeTime: cloud.showRelativeTime ?? false,
+    showRelativeTime: cloud.showRelativeTime,
     theme: cloud.theme,
   };
 }

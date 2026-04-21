@@ -2,10 +2,11 @@
 
 ## Context
 
-Happyhour (formerly Khlock) is a world clock and timezone converter web app (React/TypeScript/Tailwind, deployed on Cloudflare Pages at `happyhour.day`). Phases 1-2 (codebase cleanup, deployment, mobile UX fixes) are complete. The scroll-driven header animation is confirmed smooth. This PRD covers two tracks:
+Happyhour (formerly Khlock) is a world clock and timezone converter web app (React/TypeScript/Tailwind, deployed on Cloudflare Pages at `happyhour.day`). Phases 1-2 (codebase cleanup, deployment, mobile UX fixes) are complete. The scroll-driven header animation is confirmed smooth. This PRD covers three tracks:
 
 1. **Phase 3: UI Revisions + Cloud Sync** — revise clock tile interactions, hero clock, city menu, drag-and-drop, and add user accounts with cloud-synced preferences
 2. **iOS Native App** — SwiftUI app with feature parity + home/lock screen widgets + cloud sync
+3. **Sharing** — let users share a selection of clocks (and, when in custom-time mode, a specific moment) via a link that opens a transient view on `happyhour.day`
 
 **Status (2026-03-26):** Most Track 1 UI revisions are complete. Cloud sync (Clerk auth + Cloudflare Worker + D1) shipped 2026-03-25 using the Clerk dev instance (production instance requires a custom domain — see Backlog). Relative time offset feature and AM/PM sizing shipped 2026-03-26. Cross-device sync bug fixed 2026-03-26 — replaced union merge with cloud-wins strategy plus timestamp guard to prevent deleted zones from resurrecting on other devices. App rename voting form created via Google Forms. Several bug fixes and polish items remain before Track 1 is complete.
 
@@ -292,6 +293,96 @@ Happyhour/
 
 ---
 
+## Track 3: Sharing
+
+### Goal
+Let any user generate a link that shares a subset of their clocks — and, when the sender is in custom-time mode, the specific moment they're viewing. Opening the link loads those clocks into a transient Happyhour session on `happyhour.day` that does not overwrite the recipient's saved state. A prominent CTA lets the recipient save the shared cities to their own Happyhour (and, once it exists, download the iOS app).
+
+### Sender flow
+
+1. **Entry** — Sidebar menu gets a new `Share` item (below Appearance, above the auth block).
+2. **Share mode** — Tapping `Share` closes the sidebar and puts the main view into share-mode. Every clock (hero + tiles) shows a round checkbox in a corner. The hero tile is pre-selected by default; all others start deselected. Non-selected tiles dim to ~40 % opacity. A dismissible `Cancel` affordance sits next to the existing "RESET TIME" slot.
+3. **Selection** — User taps tiles to toggle inclusion. Minimum selection: 1 (the hero pre-selection satisfies this).
+4. **Confirmation** — A bottom sheet (desktop: dialog) opens with:
+   - Preview: a compact list of selected cities and, if moment is attached, the frozen time
+   - `Copy link` button (primary)
+   - `Share…` button invoking `navigator.share()` where supported (iOS Safari, Chrome Android)
+   - Email fallback (mailto with pre-filled subject/body)
+5. **Moment handling** — If the sender is in **live** mode, the link encodes zones only. If in **custom-time** mode, the link encodes zones + the current hero moment as an ISO 8601 timestamp. No extra toggle in the share UI — the current app mode determines the share mode.
+6. **Exit** — Copying the link, triggering `navigator.share`, pressing Escape, or tapping `Cancel` exits share mode.
+
+### Share URL structure
+
+Client-encoded, stateless. No backend in v1.
+
+| Param | Purpose | Example |
+|---|---|---|
+| path | `/s` | `happyhour.day/s` |
+| `z` | Comma-separated city keys, hero first | `z=paris_FR,newYork_US,tokyo_JP` |
+| `t` | Optional ISO 8601 instant (with offset) — presence indicates frozen-moment share | `t=2026-04-21T15%3A00%3A00-04%3A00` |
+
+Example (live): `https://happyhour.day/s?z=paris_FR,newYork_US`
+Example (custom-time meeting share): `https://happyhour.day/s?z=paris_FR,newYork_US&t=2026-04-21T15%3A00%3A00-04%3A00`
+
+**Decoding** — `/s` route reads params, resolves zones via the existing tier lookups (`getCityOrCachedTile`, `loadTopCities`, `loadCities`), sets the first zone as hero, and if `t` is present flips into custom-time mode with that instant. Invalid or missing city keys are skipped with a small inline note ("3 of 4 cities loaded"); an empty set falls back to the sender's implied hero and shows a "Link looks broken" state.
+
+### Recipient view
+
+- **Route** — `/s?z=…&t=…` is a distinct route from `/`; its state is session-scoped, never written to localStorage, never sent to the cloud-sync API.
+- **Interactivity** — Full app: recipient can toggle 24h, change time, toggle relative-time, drag to reorder, add/remove cities. These edits live only in the current tab session. Refreshing the share URL re-loads the shared state; closing the tab discards the session.
+- **Recipient's saved state is preserved** — their `localStorage["happyhour:zones"]` and cloud-synced zones are untouched. Leaving the `/s` route returns them to their own view.
+- **Save CTA** — A dismissible banner below the sticky header reads:
+  > `Save these cities to your Happyhour` · `[Save]` · `[×]`
+
+  Tapping `Save` merges the shared zones into the recipient's saved set, respecting the 16-city cap. If the merge would exceed 16, the banner switches to a choice: `Replace your cities / Add as many as fit / Cancel`. Dismissing the banner persists that dismissal for the current tab session only — it returns on future share visits.
+- **Sign-in prompt** — unchanged from the main app (sidebar `Sign in` button). Signing in while on `/s` applies the same Save CTA logic on top of the cloud-synced set.
+- **iOS app download** — sidebar gets a `Get the iOS app` link under the Share item once Track 2 ships. On first arrival at `/s` from a mobile user agent, a one-time subtle toast also surfaces the download link; dismissal persists in `localStorage["happyhour:ios-cta-dismissed"]`.
+
+### Open Graph / social previews
+
+- **v1:** static OG image and metadata. `og:title` reads `Happyhour — shared clocks`; `og:description` lists up to 3 city names from `?z=`. Handled at build time by index.html + a tiny runtime patch via `document.querySelector('meta[property="og:description"]')` on `/s` routes. This is a no-cost first pass.
+- **Later:** dynamic OG image rendered by a Cloudflare Worker route (Satori or equivalent) showing the selected city names + times. Deferred — track as a Backlog item.
+
+### Selection UX specifics
+
+| Element | Spec |
+|---|---|
+| Checkbox position | Top-right corner of each tile, 12 px inset. Hero gets a matching checkbox in its existing zone/temp row |
+| Checkbox state | Unselected: 1 px `#6b7280` stroke, transparent fill. Selected: yellow fill (`#FFD900`), black check glyph |
+| Dimmed tile | Opacity 0.4; pointer-events pass through to the checkbox only |
+| Keyboard | `Space` toggles a focused tile; `Esc` exits share mode; `Enter` on the confirmation modal copies link |
+| Share button state | Disabled (40 % opacity, `aria-disabled="true"`) when zero tiles selected |
+
+### Technical scope
+
+| Area | Change |
+|---|---|
+| Routing | `App.tsx` gets a new route `/s` pointing to a new `client/src/pages/share.tsx`. The share page renders the same `WorldClock` tree, with a `transient` prop that suppresses localStorage writes and cloud-sync calls |
+| URL helpers | New `client/src/lib/share-url.ts` exposing `encodeShareUrl({ zones, heroKey, frozenInstant? })` and `decodeShareUrl(search: string)` |
+| Share mode state | Lifted into `world-clock.tsx` alongside existing hero/zones state; threaded down as a `shareMode` prop to tiles |
+| Share mode overlay | New `client/src/components/share-mode-overlay.tsx` — Cancel affordance, confirmation modal, copy/share/email buttons |
+| Sidebar | Add `Share` menu item above the auth block |
+| Tile | `digital-clock.tsx` renders a checkbox when `shareMode === true`; dims when unselected |
+| Transient-mode plumbing | `useCloudSync` and the localStorage-writing code paths in `world-clock.tsx` and `time-zone-converter.tsx` short-circuit when a top-level `transient` flag is set |
+| No backend | v1 is purely client-side. No D1 schema change, no new API endpoint |
+
+### Out of scope (Track 3 v1)
+
+- Server-generated short IDs (deferred — Backlog)
+- Dynamic OG images (deferred — Backlog)
+- Share analytics / open counts (deferred — requires backend)
+- Expiring share links (requires backend)
+- Embeds / iframes
+
+### Phased delivery (Sharing)
+
+1. **v1.0** — Share mode + copy-link + transient view + Save CTA (live-mode shares only)
+2. **v1.1** — Frozen-moment shares via `?t=` (requires custom-time plumbing already in the app)
+3. **v1.2** — iOS deep-link (after Track 2 ships) — `happyhour.day/s` URLs open the iOS app if installed, fall through to web if not
+4. **v2.0** — Dynamic OG images + optional short IDs (if usage justifies a backend)
+
+---
+
 ## Verification
 
 ### Web (Track 1)
@@ -317,6 +408,18 @@ Happyhour/
 - Test light/dark mode transitions
 - Sign in with same account as web, verify same cities appear
 - Test offline behavior (local changes sync when back online)
+
+### Sharing (Track 3)
+- Enter share mode from the sidebar; confirm hero is pre-selected and other tiles start unselected
+- Toggle tiles, verify dim/full-opacity transitions and checkbox states
+- Copy a live-mode link, open in a private/incognito window: confirm shared zones load and the recipient's (empty) localStorage stays empty
+- Open the same link in a window that already has saved zones: confirm saved zones are preserved, Save CTA banner appears
+- Test the Save CTA with an under-16 merge (succeeds silently) and an over-16 merge (shows Replace/Add-as-fit/Cancel choice)
+- In custom-time mode, generate a share link, open in incognito: confirm recipient lands in custom-time mode at the same instant
+- In custom-time mode recipient view, edit time: confirm the change is session-only (refresh returns to the shared instant)
+- Test on mobile Safari and Chrome Android: `navigator.share` fires native sheet; fallback to `Copy` works when unsupported
+- Test with an invalid city key in `?z=`: confirm graceful skip + "N of M loaded" note
+- Test OG preview by pasting the share URL into Slack / iMessage / Discord
 
 ---
 
@@ -380,6 +483,8 @@ Happyhour/
 
 - [ ] Keyboard shortcuts — add clock tiles, tab between clocks, edit custom time, etc.
 - [ ] Increase zone/temp font size on clock tiles for better readability
+- [ ] Sharing: dynamic OG images — Worker-rendered preview showing selected cities + times (v2.0 of Track 3)
+- [ ] Sharing: server-generated short IDs with optional expiry (v2.0 of Track 3; requires new D1 table + API endpoints)
 
 ---
 

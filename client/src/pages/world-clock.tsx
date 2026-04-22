@@ -7,6 +7,7 @@ import { useTheme } from "@/lib/theme-provider";
 import { initZonesFromStorage } from "@/components/time-zone-converter";
 import { HappyhourLogo } from "@/components/icons/happyhour-logo";
 import { HappyhourWordmark } from "@/components/icons/happyhour-wordmark";
+import { OfflineBanner } from "@/components/offline-banner";
 
 // Header animation constants
 const SCROLL_RANGE = 120; // px of scroll over which the shrink fully plays out
@@ -38,8 +39,8 @@ export default function WorldClock() {
   const [selectedZones, setSelectedZones] = useState<string[]>(initZonesFromStorage);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const logoVariant = resolvedTheme === "happy" ? "happy" : "default";
-  // Figma spec per theme: light/happy wordmark = #333333, dark = white.
-  const wordmarkColor = resolvedTheme === "dark" ? "#FFFFFF" : "#333333";
+  // Figma spec per theme: light/happy wordmark = #000000, dark = white.
+  const wordmarkColor = resolvedTheme === "dark" ? "#FFFFFF" : "#000000";
   const [sidebarTop, setSidebarTop] = useState(28);
   const headerRef = useRef<HTMLElement>(null);
   const logoRef = useRef<SVGSVGElement>(null);
@@ -142,7 +143,7 @@ export default function WorldClock() {
         ref={headerRef}
         className="sticky top-0 z-50 bg-background border-b border-border px-6 md:px-12 lg:px-24 py-8"
       >
-        <div className="mx-auto max-w-4xl flex flex-row items-center justify-between gap-4 pl-[10px] pr-[20px]">
+        <div className="mx-auto max-w-4xl flex flex-row items-center justify-between gap-4 pl-[10px] pr-[10px] sm:pr-[20px]">
           <h1
             className="flex items-center gap-[10px] min-w-0"
             data-testid="text-app-title"
@@ -150,7 +151,9 @@ export default function WorldClock() {
             <HappyhourLogo
               ref={logoRef}
               variant={logoVariant}
-              className="shrink-0"
+              // mt-[2px] on mobile <500px nudges the scaled logo down so its top edge
+              // aligns with the top of the "H" cap in the wordmark.
+              className="shrink-0 max-[499px]:mt-[2px]"
               style={{ width: `${LOGO_START}px`, height: `${LOGO_START}px` }}
             />
             {/* Nameplate: pt-[9px] matches Figma so the logo's vertical center aligns with the wordmark's
@@ -175,6 +178,13 @@ export default function WorldClock() {
           </button>
         </div>
       </header>
+
+      {/* Offline banner — renders a yellow band under the sticky header whenever navigator.onLine is false. */}
+      <div className="px-6 md:px-12 lg:px-24 pt-[10px]">
+        <div className="mx-auto max-w-4xl">
+          <OfflineBanner />
+        </div>
+      </div>
 
       {/* Sidebar positioning wrapper — fixed, mirrors content horizontal layout */}
       <div className="fixed inset-x-0 top-0 bottom-0 z-[55] px-6 md:px-12 lg:px-24 pointer-events-none">

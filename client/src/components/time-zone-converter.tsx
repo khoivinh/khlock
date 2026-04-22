@@ -23,7 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { getAllCities, getCityByKey, searchCities, getTimeInCityZone, formatCityDisplay, formatCityDetail, loadCities, loadTopCities, areCitiesLoaded, areSearchCitiesReady, type TimezoneOption } from "@/lib/city-lookup";
+import { getAllCities, getCityByKey, searchCities, getTimeInCityZone, formatCityDisplay, formatCityDetail, loadCities, loadTopCities, areCitiesLoaded, areSearchCitiesReady, didFullCitiesFail, type TimezoneOption } from "@/lib/city-lookup";
 import { cacheTileMetadata, getCityOrCachedTile } from "@/lib/tile-cache";
 import { resolveLocalCity } from "@/lib/closest-city";
 
@@ -100,7 +100,7 @@ interface SortableClockItemProps {
   isHighlighted: boolean;
   onZoneChange: (index: number, zoneKey: string) => void;
   onTimeUpdate: (zoneKey: string, hours: number, minutes: number) => void;
-  onRemove: (zoneKey: string) => void;
+  onRemove?: (zoneKey: string) => void;
   allZones: string[];
   isDragActive: boolean;
   isCustomMode: boolean;
@@ -166,7 +166,7 @@ function SortableClockItem({
         isBeingDragged={isDragging}
         zoneKey={zoneKey}
         onTimeUpdate={onTimeUpdate}
-        onRemove={() => onRemove(zoneKey)}
+        onRemove={onRemove ? () => onRemove(zoneKey) : undefined}
         isDragActive={isDragActive}
         dragHandleListeners={listeners}
         heroDate={heroDate}
@@ -277,6 +277,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   );
 
   const [citiesLoaded, setCitiesLoaded] = useState(areCitiesLoaded());
+  const [fullLoadFailed, setFullLoadFailed] = useState(didFullCitiesFail());
+  const [geoDenied, setGeoDenied] = useState(false);
 
   // Three-tier load: top (fast, inline bundle) → cache fallback → full (lazy).
   useEffect(() => {
@@ -284,9 +286,10 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
       const tzFallback = detectLocalCity();
       setHeroZone(tzFallback);
       // Upgrade the hero clock to the geographically-closest city once geolocation resolves.
-      // Silent — on denial/error we keep the timezone-derived fallback.
-      resolveLocalCity(tzFallback).then((key) => {
+      // On denial we keep the timezone-derived fallback and surface a hint next to the hero city name.
+      resolveLocalCity(tzFallback).then(({ key, geoDenied: denied }) => {
         setHeroZone((current) => (current === tzFallback ? key : current));
+        if (denied) setGeoDenied(true);
       });
     });
 
@@ -299,7 +302,9 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
     let idleHandle: number | undefined;
     let timeoutHandle: number | undefined;
     const startFullLoad = () => {
-      loadCities().then(() => setCitiesLoaded(true));
+      loadCities()
+        .then(() => setCitiesLoaded(true))
+        .catch(() => setFullLoadFailed(true));
     };
     if (w.requestIdleCallback) {
       idleHandle = w.requestIdleCallback(startFullLoad, { timeout: 3000 });
@@ -374,19 +379,21 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   }, [isCustomMode]);
 
   const handleZoneChange = useCallback((index: number, zoneKey: string) => {
+    // If the picked city is already displayed on another tile, leave this tile
+    // unchanged and flash the existing tile — mirrors the add-dropdown behavior
+    // at lines 608-623. Prevents the prior swap-and-stale-edit-state bug.
+    const existingIndex = selectedZones.indexOf(zoneKey);
+    if (existingIndex !== -1 && existingIndex !== index) {
+      setHighlightedZone(zoneKey);
+      setTimeout(() => setHighlightedZone(null), 1500);
+      return;
+    }
     onZonesChange((prev: string[]) => {
-      const existingIndex = prev.indexOf(zoneKey);
-      if (existingIndex !== -1 && existingIndex !== index) {
-        const newZones = [...prev];
-        newZones[existingIndex] = newZones[index];
-        newZones[index] = zoneKey;
-        return newZones;
-      }
       const newZones = [...prev];
       newZones[index] = zoneKey;
       return newZones;
     });
-  }, [onZonesChange]);
+  }, [onZonesChange, selectedZones]);
 
   const handleAddClock = useCallback((zoneKey: string) => {
     if (selectedZones.length >= MAX_CLOCKS) return;
@@ -407,7 +414,8 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
   }, [selectedZones, onZonesChange, sortEastToWest, onSortEastToWestChange]);
 
   const handleRemoveClock = useCallback((zoneKey: string) => {
-    onZonesChange((prev: string[]) => prev.filter((z: string) => z !== zoneKey));
+    // Last-tile guard: never allow the grid to go empty.
+    onZonesChange((prev: string[]) => (prev.length <= 1 ? prev : prev.filter((z: string) => z !== zoneKey)));
   }, [onZonesChange]);
 
   const [addZoneOpen, setAddZoneOpen] = useState(false);
@@ -416,7 +424,11 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
 
   // Opening the dropdown nudges the full-dataset load if idle didn't fire yet.
   useEffect(() => {
-    if (addZoneOpen) loadCities().then(() => setCitiesLoaded(true));
+    if (addZoneOpen) {
+      loadCities()
+        .then(() => setCitiesLoaded(true))
+        .catch(() => setFullLoadFailed(true));
+    }
   }, [addZoneOpen]);
 
   // Keep the tile-metadata cache warm so returning users render tiles on first paint.
@@ -562,6 +574,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
           isCustomMode={isCustomMode}
           onReset={onReset}
           use24Hour={use24Hour}
+          geoDenied={geoDenied}
         />
       </section>
 
@@ -597,7 +610,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
                   data-testid="input-add-zone-search"
                 />
                 <CommandList>
-                  <CommandEmpty>No cities found.</CommandEmpty>
+                  <CommandEmpty>Can’t find “{addZoneSearchQuery}”</CommandEmpty>
                   <CommandGroup>
                     {allFilteredCities.map((city) => {
                       const isDisplayed = selectedZones.includes(city.key);
@@ -637,6 +650,11 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
                     })}
                   </CommandGroup>
                 </CommandList>
+                {fullLoadFailed && (
+                  <p className="border-t border-[#e5e7eb] dark:border-[#6C6C6C] px-[12px] py-[8px] text-[11px] text-muted-foreground">
+                    Showing top 500 cities — full list unavailable.
+                  </p>
+                )}
               </Command>
             </div>
           )}
@@ -666,7 +684,7 @@ export function TimeZoneConverter({ isCustomMode, selectedTime, onTimeUpdate, on
                   isHighlighted={highlightedZone === zoneKey}
                   onZoneChange={handleZoneChange}
                   onTimeUpdate={onTimeUpdate}
-                  onRemove={handleRemoveClock}
+                  onRemove={selectedZones.length <= 1 ? undefined : handleRemoveClock}
                   allZones={selectedZones}
                   isDragActive={activeId !== null}
                   isCustomMode={isCustomMode}

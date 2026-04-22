@@ -331,7 +331,14 @@ export function Sidebar({
           {/* Footer pinned to bottom */}
           <p className="mt-auto text-[12px] leading-[22px] tracking-[-0.43px] text-white capitalize">
             <span className="font-medium">©2026 </span>
-            <span className="font-bold">Design Dept Partners LLC</span>
+            <a
+              href="https://designdept.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold no-underline text-inherit hover:opacity-80 transition-opacity"
+            >
+              Design Dept Partners LLC
+            </a>
           </p>
         </div>
       </div>

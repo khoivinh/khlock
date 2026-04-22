@@ -14,6 +14,8 @@ Happyhour (formerly Khlock) is a world clock and timezone converter web app (Rea
 
 **Status (2026-04-21):** New outlined wordmark + Happy Mode sidebar icon shipped; Happy Mode promoted to a first-class appearance option alongside light/dark/system. City-loading performance reworked into three tiers (tile cache, top-500 inline bundle, lazy full dataset). Relative-time cloud sync code-complete — awaiting D1 migration + worker deploy. Error-state design specified (this PRD) covering nine failure surfaces; the top three — weather failure, search no-results, empty state — are the first to implement. See `docs/2026-04-21-devlog.md`.
 
+**Status (2026-04-22):** Batch of UX refinements shipped — wordmark color to `#000000` (light/happy), mobile logo vertical alignment, relative-time badge letterspacing, desktop temperature `whitespace-nowrap` fix for wide badges (Sydney +14HR case), duplicate-city edit now flashes the existing tile instead of swapping, mobile drawer-toggle horizontal alignment, sidebar footer "Design Dept Partners LLC" linked to designdept.com, Happy-mode temperature palette revised (four bands), and error states #1/#2/#3/#5/#6/#9 implemented with #4 replaced by a last-tile guard and #8 dropped as unreachable. See `docs/2026-04-22-devlog.md`.
+
 ---
 
 ## Track 1: UI Revisions + Cloud Sync (Web)
@@ -105,8 +107,20 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 - [x] Desktop tile layout: city name and time stacked vertically, 15px gap between city+time block and zone+temp row
 - [x] Mobile tile layout: city name and time side-by-side (horizontal), 0px gap to zone+temp
 - [x] Clock tile editing: single `type="time"` input with bordered edit UI matching Figma specs
-- [x] Duplicate city guard: changing a tile's city to one already displayed swaps positions instead of creating duplicates
+- [x] Duplicate city guard *(revised 2026-04-22)*: when the user picks an already-displayed city in a tile's edit menu, the editing tile is left unchanged and the existing tile flashes yellow (`animate-highlight-yellow`, ~1.5s). Previously swapped positions — swap triggered a stale-editing-state bug on the other tile
+- [x] Last-tile guard *(added 2026-04-22)*: the ellipsis menu is hidden when only one tile remains; `handleRemoveClock` no-ops when the grid has a single zone
 - [x] Max clocks: 16 (web)
+- [x] **Temperature color bands** *(added 2026-04-22, see `docs/2026-04-22-temperature-colors.md`)*: `getTemperatureColor` in `client/src/hooks/use-weather.ts` maps °C to Tailwind classes; `.happy` overrides in `client/src/index.css` shift four bands for contrast against the `#FFD900` page.
+
+  | Band     | Range (°C) | Tailwind class       | Light / Dark | Happy       |
+  |----------|------------|----------------------|--------------|-------------|
+  | Freezing | ≤ 0        | `text-blue-500`      | `#3b82f6`    | `#3b82f6`   |
+  | Cold     | 1–10       | `text-cyan-500`      | `#06b6d4`    | `#06b6d4`   |
+  | Mild     | 11–18      | `text-green-500`     | `#22c55e`    | `#10b981` (emerald-500) |
+  | Warm     | 19–24      | `text-yellow-500`    | `#eab308`    | `#C68A1A`   |
+  | Hot      | 25–30      | `text-orange-500`    | `#f97316`    | `#CA6100`   |
+  | Very hot | > 30       | `text-red-500`       | `#ef4444`    | `#B51818`   |
+
 - [ ] **Bug:** "New Delhi" city name wrapping again — let city name span full tile width (flow under time display) before truncating; maintain left alignment of city name, timezone, and temp rows (must not shift under drag handle icon)
 
 ### Scope: Sidebar Menu *(added post-PRD, implemented 2026-03-21)*
@@ -156,7 +170,7 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 **Files:** `client/src/components/icons/happyhour-wordmark.tsx`, `client/src/components/icons/happyhour-logo.tsx`, `client/src/components/icons/happy-mode-icon.tsx`, `client/src/pages/world-clock.tsx`, `client/src/components/sidebar.tsx`, `client/src/index.css`
 **Figma:** [Header wordmark (70:2208)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=70-2208), [Dark-mode header (114:1333)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=114-1333), [Happy Mode sidebar (198:1789)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=198-1789), [Mobile header (6:2)](https://www.figma.com/design/ykzuXYZ4gnogbNKZeV3Q1H/Happyhour-Design?node-id=6-2)
 
-- [x] New outlined wordmark SVG (`HappyhourWordmark`) with fills bound to `currentColor`; logo fixed to 38 px, gap to 10 px
+- [x] New outlined wordmark SVG (`HappyhourWordmark`) with fills bound to `currentColor`; logo fixed to 38 px, gap to 10 px. Wordmark color: light + happy = `#000000` *(revised 2026-04-22 from `#333333`)*, dark = `#FFFFFF`. On mobile `<500 px`, the logo gets a `mt-[2px]` offset so its top edge aligns with the "H" cap
 - [x] Scroll animation interpolates logo + wordmark heights (replaces the prior h1 font-size approach)
 - [x] Mobile (<500 px) scales the wordmark to 73 % per the Figma mobile variant
 - [x] Happy Mode promoted to a first-class theme option — `system → light → dark → happy` cycle in the Appearance control
@@ -176,30 +190,33 @@ Revise the current UI — refine clock tile interactions, simplify the layout to
 ### Out of Scope (Phase 3)
 - Theme/color palette changes (current palette is close to final)
 
-### Scope: Error States *(design 2026-04-21, implementation pending)*
+### Scope: Error States *(design 2026-04-21, implementation 2026-04-22)*
 
-Inventory of the nine failure surfaces in the app and where each should appear in the UI. Recommendations favor inline, contextual surfaces (tile, dropdown, hero) over modal/banner interrupts — matching Happyhour's minimal aesthetic. Source audit: `docs/2026-04-21-devlog.md` → "Error-state design audit".
+Inventory of failure surfaces in the app and where each appears in the UI. Recommendations favor inline, contextual surfaces (tile, dropdown, hero) over modal/banner interrupts — matching Happyhour's minimal aesthetic. Source audit: `docs/2026-04-21-devlog.md` → "Error-state design audit". 2026-04-22 revisions: #4 (empty state) dropped in favor of a last-tile guard; #7 (sync failure) kept as-is with no extra retry UI; #8 (invalid time input) dropped as unreachable; #1/#2/#3/#5/#9 designs refined per Figma 232-3160 / 232-3310 / 232-3323 / 232-3671 / 232-3847.
 
-| # | Error | UI surface — where it appears | Copy direction | Priority |
+| # | Error | UI surface — where it appears | Copy | Status |
 |---|---|---|---|---|
-| 1 | Weather fetch fails | **Inline in the tile's zone/temp row**, replacing the temperature. Neutral `—` glyph with a small `CloudOff` lucide icon; tooltip on hover. If every tile fails in a single session, defer to the global offline banner (#3) rather than stacking tile-level warnings. | Visual `—` + tooltip: `Weather unavailable` | **High** |
-| 2 | City search: no results | **Inside the Add Cities dropdown** — replace the current `CommandEmpty` text. Two-line empty state, same typography as dropdown items, muted color. | Primary: `No cities match "{query}"` · Secondary: `Try a different spelling or a nearby major city.` | **High** (cheap win) |
-| 3 | Offline / no network | **New global banner slot** directly below the sticky header. Full-width, 1 line, muted yellow background aligned with the Happy Mode palette. Auto-dismisses on the `online` event. Driven by `navigator.onLine` + `window.addEventListener('online'/'offline')`. Accessible: `role="status" aria-live="polite"`. Does not block interaction. | `You're offline. Clocks still work; weather and sync will resume automatically.` | **High** |
-| 4 | Empty state (no cities) | **In the tile grid**, render a single dashed-border "Add your first city" ghost tile below the hero. Reuses tile dimensions for visual rhythm; tapping it opens the Add Cities dropdown. Disappears once any city is added. | Title: `Add your first city` · Subtitle: `Track time across any city in the world.` | **High** (onboarding) |
-| 5 | Geolocation denied | **One-time hero caption** — small text under the hero city name, dismissible via `×`. Dismissal persists in `localStorage["happyhour:geo-hint-dismissed"]`. No toast, no modal. | `Using your timezone. Allow location for a closer match.` | **Low** |
-| 6 | Full city DB fails to load | **Footer of the Add Cities dropdown** (below the results list). Tiny muted text. Only renders when `fullState === null && loadAttempted === true`. | `Showing top 500 cities — full list unavailable.` | **Low** |
-| 7 | Cloud sync failure | **Enhance existing `SyncStatusIndicator`** in the sidebar header. Add a small dot indicator (2–3 px, `#ef4444`) on the sidebar drawer-toggle icon when `syncStatus === "error"`, visible without opening the sidebar. Inside the sidebar, add a `Retry` text link next to the status label. Copy stays calm — local storage still works. | Sidebar status: `Sync failed — tap to retry` | **Medium** |
-| 8 | Invalid time input | **Inline on the `type="time"` input** — 1 px red border (`#ef4444`) when `handleUpdateClick` runs with empty/malformed value. OK button becomes disabled (`aria-disabled="true"`, 40 % opacity). No error text; visual cue is sufficient. **Ships with the open clock-edit refactor.** | Visual only | **Medium** (blocked on refactor) |
-| 9 | 404 / unknown route | **Reuse the existing `not-found.tsx` full-page card** but replace the dev-flavored copy ("Did you forget to add the page to the router?") with user-facing text. Add the Happyhour smiley logo above the heading and a "Go to Happyhour" button linking to `/`. | Title: `This page doesn't exist` · Body: `The link might be broken, or the page may have moved.` · Button: `Go to Happyhour` | **High** (polish) |
+| 1 | Weather fetch fails | **Inline in the zone/temp row** (tiles + hero), replacing the temperature. No icon or tooltip — just the text badge. Triggered when the `useWeather` query is in `isError` state. | `Weather Unavailable` — Inter SemiBold 8px uppercase `#6b7280`, `tracking-[0.2px]` | **Shipped 2026-04-22** |
+| 2 | City search: no results | **Inside the Add Cities dropdown** and the per-tile city selector — replace the current `CommandEmpty` text. Single line, muted. | `Can’t find “{query}”` | **Shipped 2026-04-22** |
+| 3 | Offline / no network | **Global banner slot** directly below the sticky header. Full-width, rounded 5px, `p-[10px]`, theme-aware colors (see below). Driven by `navigator.onLine` + `online`/`offline` window events via `useOnlineStatus`. `role="status" aria-live="polite"`. Auto-hides on reconnect. | Desktop: **`You're Currently Offline`** (bold) + `Weather and sync will resume when you're back online.` Mobile: only the bold headline | **Shipped 2026-04-22** |
+| 4 | ~~Empty state (no cities)~~ | **Replaced with a last-tile guard** (see Clock Tile Design Refinements). `handleRemoveClock` no-ops when only one zone remains; the ellipsis button is hidden on the last tile. | — | **Shipped 2026-04-22** |
+| 5 | Geolocation denied | **Inline trailing text next to the hero city name.** Renders when `resolveLocalCity()` resolves with `geoDenied: true` (PositionError.PERMISSION_DENIED). No dismiss `×` — hint stays until the permission state changes (matches Figma 232-3671). | `Allow location for a closer match.` — 10px, non-uppercase, `#6b7280`, appended after the city name with `ml-2` | **Shipped 2026-04-22** |
+| 6 | Full city DB fails to load | **Footer of the Add Cities dropdown**. Renders when `didFullCitiesFail()` returns true (the `loadCities()` import rejected). | `Showing top 500 cities — full list unavailable.` — 11px muted, `border-t` on container | **Shipped 2026-04-22** |
+| 7 | Cloud sync failure | **Existing `SyncStatusIndicator` in the sidebar** — no additional UI. Current "Sync error" state with `AlertCircle` icon is the final treatment. No separate retry button; sync retries on the next debounced change. | Sidebar indicator only | **Final (no change)** |
+| 8 | ~~Invalid time input~~ | **Dropped.** Investigation 2026-04-22 confirmed the native `<input type="time">` prevents empty/malformed submissions from reaching `handleUpdateClick`, which also has an `if (editTime)` guard. No observable error state. | — | **N/A** |
+| 9 | 404 / unknown route | **`client/src/pages/not-found.tsx` rebuilt** per Figma 232-3847: hero-style layout with "ERROR" eyebrow, huge "404" heading (Zalando Sans Black 96px), and a red `#ef4444` body line. Header renders the Happyhour logo + wordmark linked to `/` (no separate CTA button needed). | Eyebrow: `ERROR` · Heading: `404` · Body: `Sorry, couldn't find your page.` | **Shipped 2026-04-22** |
 
-#### Recommended shipping order
+**Offline banner theme colors:**
 
-1. **#2 (search no-results)** + **#9 (404 polish)** — copy-only, same-day wins.
-2. **#4 (empty state)** — small new component, onboarding impact.
-3. **#1 (weather tile)** + **#3 (offline banner)** — pair them so global offline takes precedence over N tile-level warnings.
-4. **#7 (sync dot + retry)** — small enhancement to the existing indicator.
-5. **#5, #6** — defer; today's silent fallbacks are already graceful.
-6. **#8** — ships with the clock-edit refactor.
+| Mode | Background | Text |
+|---|---|---|
+| Light | `#fdf7ca` | `#6b7280` |
+| Dark  | `#3d3520` | `#e5e5e5` |
+| Happy | `#333333` | `#FFD900` |
+
+#### Shipping order (historical, for reference)
+
+Shipped in one batch on 2026-04-22: #1, #2, #3, #4→guard, #5, #6, #9. #7 needed no change. #8 dropped.
 
 ---
 

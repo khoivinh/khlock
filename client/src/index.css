@@ -196,17 +196,36 @@
   }
 }
 
-/* Happy Mode temperature readability — the default Tailwind yellow/orange/green
-   lose contrast against the #ffd900 background, so we darken them. Only affects
-   temperature badges; other palette uses remain the light/dark-mode values. */
+/* Offline banner — theme-aware colors. Defaults to light-mode yellow band (Figma 232-3492).
+   Dark: dimmed amber band + near-white text. Happy: dark band + Happy yellow (page is #FFD900). */
+.offline-banner {
+  background-color: #fdf7ca;
+  color: #6b7280;
+}
+.dark .offline-banner {
+  background-color: #3d3520;
+  color: #e5e5e5;
+}
+.happy .offline-banner {
+  background-color: #333333;
+  color: #FFD900;
+}
+
+/* Happy Mode temperature readability — the default Tailwind yellow/orange/green/red
+   lose contrast against the #ffd900 background, so we shift them. Only affects
+   temperature badges; other palette uses remain the light/dark-mode values.
+   Source: docs/2026-04-22-temperature-colors.md "Revised 2026-04-22". */
+.happy .text-green-500 {
+  color: #10b981; /* emerald-500 — Mild band (designer-selected substitute for #00B946) */
+}
 .happy .text-yellow-500 {
-  color: #8b5a00;
+  color: #C68A1A; /* Warm band */
 }
 .happy .text-orange-500 {
-  color: #b45309;
+  color: #CA6100; /* Hot band */
 }
-.happy .text-green-500 {
-  color: #166534;
+.happy .text-red-500 {
+  color: #B51818; /* Very hot band */
 }
 
 /* Remove blue highlight that appears when dragging clock tiles */

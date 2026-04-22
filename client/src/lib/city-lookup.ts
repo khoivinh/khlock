@@ -62,6 +62,7 @@ let topState: LookupState | null = null;
 let fullState: LookupState | null = null;
 let topPromise: Promise<void> | null = null;
 let fullPromise: Promise<void> | null = null;
+let fullLoadFailed = false;
 
 function currentState(): LookupState | null {
   return fullState || topState;
@@ -189,12 +190,25 @@ export function loadCities(): Promise<void> {
   if (fullState) return Promise.resolve();
   if (fullPromise) return fullPromise;
 
-  fullPromise = import("@/data/cities.json").then((module) => {
-    const raw = module.default as { c: string[]; t: string[]; p: string[]; d: unknown[][] };
-    fullState = buildLookup(raw);
-  });
+  fullPromise = import("@/data/cities.json")
+    .then((module) => {
+      const raw = module.default as { c: string[]; t: string[]; p: string[]; d: unknown[][] };
+      fullState = buildLookup(raw);
+      fullLoadFailed = false;
+    })
+    .catch((err) => {
+      fullLoadFailed = true;
+      fullPromise = null; // allow a retry on next invocation
+      throw err;
+    });
 
   return fullPromise;
+}
+
+/** True if the most recent `loadCities()` attempt rejected. Used to surface
+ *  a "Showing top 500 cities — full list unavailable" notice in the UI. */
+export function didFullCitiesFail(): boolean {
+  return fullLoadFailed;
 }
 
 /** True once the full dataset has resolved. */

@@ -69,25 +69,32 @@ function detectLocalTimezone(): string {
   }
 }
 
+export interface LocalCityResult {
+  key: string;
+  /** True when the user explicitly denied geolocation permission (PositionError.PERMISSION_DENIED).
+   *  Used to render the "Allow location for a closer match." hint next to the hero city name. */
+  geoDenied: boolean;
+}
+
 /** Try to resolve the user's closest city via browser geolocation.
  *  Falls back to the passed `timezoneFallback` key on permission denial, timeout,
  *  or any other failure. Caches successful results for CACHE_TTL_MS. */
-export function resolveLocalCity(timezoneFallback: string): Promise<string> {
+export function resolveLocalCity(timezoneFallback: string): Promise<LocalCityResult> {
   const tz = detectLocalTimezone();
 
   const cached = readCache();
   if (cached && cached.timezone === tz && Date.now() - cached.savedAt < CACHE_TTL_MS) {
-    return Promise.resolve(cached.key);
+    return Promise.resolve({ key: cached.key, geoDenied: false });
   }
 
   if (typeof navigator === "undefined" || !navigator.geolocation) {
-    return Promise.resolve(timezoneFallback);
+    return Promise.resolve({ key: timezoneFallback, geoDenied: false });
   }
 
-  return new Promise<string>((resolve) => {
-    const finalize = (key: string, cache: boolean) => {
+  return new Promise<LocalCityResult>((resolve) => {
+    const finalize = (key: string, cache: boolean, geoDenied: boolean) => {
       if (cache) writeCache({ key, timezone: tz, savedAt: Date.now() });
-      resolve(key);
+      resolve({ key, geoDenied });
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -96,9 +103,12 @@ export function resolveLocalCity(timezoneFallback: string): Promise<string> {
           position.coords.latitude,
           position.coords.longitude
         );
-        finalize(match?.key ?? timezoneFallback, Boolean(match));
+        finalize(match?.key ?? timezoneFallback, Boolean(match), false);
       },
-      () => finalize(timezoneFallback, false),
+      (err) => {
+        // PositionError.PERMISSION_DENIED === 1 per W3C Geolocation spec.
+        finalize(timezoneFallback, false, err.code === 1);
+      },
       { enableHighAccuracy: false, maximumAge: 10 * 60 * 1000, timeout: 8000 }
     );
   });

@@ -56,6 +56,9 @@ interface DigitalClockProps {
   onReset?: () => void;
   use24Hour?: boolean;
   relativeOffset?: number;
+  /** When true (hero only), shows a small "Allow location for a closer match." hint
+   *  next to the city name. Set by the caller after browser geolocation is denied. */
+  geoDenied?: boolean;
 }
 
 function CitySelector({
@@ -126,7 +129,7 @@ function CitySelector({
             data-testid="input-city-search"
           />
           <CommandList>
-            <CommandEmpty>No cities found.</CommandEmpty>
+            <CommandEmpty>Can’t find “{searchValue}”</CommandEmpty>
             <CommandGroup>
               {filteredCities.map((city) => (
                 <CommandItem
@@ -134,7 +137,13 @@ function CitySelector({
                   value={city.key}
                   onSelect={() => {
                     onCityChange(city.key);
+                    // Close the popover via both Radix's controlled state AND the parent's
+                    // `isDropdownOpen` (which drives the tile's yellow focus background).
+                    // Calling only `setOpen(false)` here bypasses the parent callback because
+                    // Radix doesn't fire `onOpenChange` for controlled-prop updates from our side,
+                    // leaving the tile stuck in the yellow focus state when no zone swap happens.
                     setOpen(false);
+                    onOpenChange(false);
                     setSearchValue("");
                   }}
                   data-testid={`city-option-${city.key}`}
@@ -208,6 +217,7 @@ export function DigitalClock({
   onReset,
   use24Hour = true,
   relativeOffset,
+  geoDenied = false,
 }: DigitalClockProps) {
   const rawHours = time.getHours();
   const minutes = time.getMinutes().toString().padStart(2, "0");
@@ -236,7 +246,7 @@ export function DigitalClock({
   const editContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch weather data for this timezone
-  const { data: weather } = useWeather(zoneKey || selectedZoneKey);
+  const { data: weather, isError: weatherUnavailable } = useWeather(zoneKey || selectedZoneKey);
 
   function handleTimeClick() {
     if (onTimeUpdate && zoneKey) {
@@ -295,6 +305,14 @@ export function DigitalClock({
               data-testid="text-hero-city"
             >
               {cityName}
+              {geoDenied && (
+                <span
+                  className="ml-2 text-[10px] normal-case font-normal tracking-normal text-[#6b7280]"
+                  data-testid="text-hero-geo-denied-hint"
+                >
+                  Allow location for a closer match.
+                </span>
+              )}
             </p>
             {isEditing ? (
               <div ref={editContainerRef} className="relative">
@@ -355,6 +373,11 @@ export function DigitalClock({
             {!isCustomMode && weather && (
               <span className={`ml-2 ${getTemperatureColor(weather.celsius)}`} data-testid="text-hero-temperature">
                 {weather.fahrenheit}°F / {weather.celsius}°C
+              </span>
+            )}
+            {!isCustomMode && !weather && weatherUnavailable && (
+              <span className="ml-2 text-[8px] font-semibold uppercase text-[#6b7280] tracking-[0.2px] whitespace-nowrap align-middle" data-testid="text-hero-weather-unavailable">
+                Weather Unavailable
               </span>
             )}
           </p>
@@ -479,14 +502,19 @@ export function DigitalClock({
                 <span>{timezone}</span>
                 {(relativeOffset !== undefined || dayIndicator) && (
                   <span className="inline-flex items-center justify-center px-[5px] gap-[5px] border border-[#6b7280] rounded-[3px] text-[8px] font-semibold uppercase text-[#6b7280] leading-[16px] whitespace-nowrap shrink-0">
-                    {relativeOffset !== undefined && <span>{formatRelativeOffset(relativeOffset)}</span>}
+                    {relativeOffset !== undefined && <span className="tracking-[0.2px]">{formatRelativeOffset(relativeOffset)}</span>}
                     {relativeOffset !== undefined && dayIndicator && <span className="bg-[#6b7280] self-stretch w-px shrink-0" />}
                     {dayIndicator && <span className="tracking-[0.2px]">{dayIndicator === "next" ? "Next Day" : "Prev Day"}</span>}
                   </span>
                 )}
                 {!isCustomMode && weather && (
-                  <span className={getTemperatureColor(weather.celsius)} data-testid={`text-temp-${selectedZoneKey}`}>
+                  <span className={`${getTemperatureColor(weather.celsius)} whitespace-nowrap`} data-testid={`text-temp-${selectedZoneKey}`}>
                     {weather.fahrenheit}°F / {weather.celsius}°C
+                  </span>
+                )}
+                {!isCustomMode && !weather && weatherUnavailable && (
+                  <span className="text-[8px] font-semibold uppercase text-[#6b7280] tracking-[0.2px] whitespace-nowrap">
+                    Weather Unavailable
                   </span>
                 )}
               </p>
@@ -520,14 +548,19 @@ export function DigitalClock({
               <span>{timezone}</span>
               {(relativeOffset !== undefined || dayIndicator) && (
                 <span className="inline-flex items-center justify-center px-[5px] gap-[5px] border border-[#6b7280] rounded-[3px] text-[8px] font-semibold uppercase text-[#6b7280] leading-[16px] whitespace-nowrap shrink-0">
-                  {relativeOffset !== undefined && <span>{formatRelativeOffset(relativeOffset)}</span>}
+                  {relativeOffset !== undefined && <span className="tracking-[0.2px]">{formatRelativeOffset(relativeOffset)}</span>}
                   {relativeOffset !== undefined && dayIndicator && <span className="bg-[#6b7280] self-stretch w-px shrink-0" />}
                   {dayIndicator && <span className="tracking-[0.2px]">{dayIndicator === "next" ? "Next Day" : "Prev Day"}</span>}
                 </span>
               )}
               {!isCustomMode && weather && (
-                <span className={getTemperatureColor(weather.celsius)}>
+                <span className={`${getTemperatureColor(weather.celsius)} whitespace-nowrap`}>
                   {weather.fahrenheit}°F / {weather.celsius}°C
+                </span>
+              )}
+              {!isCustomMode && !weather && weatherUnavailable && (
+                <span className="text-[8px] font-semibold uppercase text-[#6b7280] tracking-[0.2px] whitespace-nowrap">
+                  Weather Unavailable
                 </span>
               )}
             </p>

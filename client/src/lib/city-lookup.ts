@@ -26,6 +26,10 @@ interface RawCity {
 export interface TimezoneOption {
   key: string;
   name: string;
+  /** Lowercased, diacritic-stripped city name used for search matching
+   *  (so typing "sao" finds "São Paulo"). Sourced from the raw dataset's
+   *  `city_ascii` field. */
+  nameAscii: string;
   gmtLabel: string;
   offset: number;
   timezone: string;
@@ -35,6 +39,17 @@ export interface TimezoneOption {
   stateAnsi?: string;
   lat: number;
   lng: number;
+  /** Original index in the population-sorted raw dataset (0 = most populous).
+   *  Used as a relevance tiebreaker in `searchCities` so that e.g. "san francisco"
+   *  returns San Francisco, CA before smaller same-named cities. */
+  rank: number;
+}
+
+/** Normalize a string for search: lowercase + strip Unicode combining marks.
+ *  NFD decomposes accented characters into base + combining mark; the regex
+ *  drops the marks, leaving "São Paulo" → "sao paulo". */
+function fold(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 /** Format city name with province/state for disambiguation.
@@ -134,7 +149,7 @@ function buildLookup(raw: { c: string[]; t: string[]; p: string[]; d: unknown[][
   // others get province/state appended (e.g., "oxford_US_OH") for disambiguation.
   // Data is already sorted by population descending, so first occurrence = highest pop.
   const usedKeys = new Set<string>();
-  const options: TimezoneOption[] = cityMapping.map((city) => {
+  const options: TimezoneOption[] = cityMapping.map((city, idx) => {
     const baseKey = `${normalizeForKey(city.city_ascii)}_${city.iso2}`;
     let key = baseKey;
     if (usedKeys.has(key) && (city.state_ansi || city.province)) {
@@ -151,6 +166,7 @@ function buildLookup(raw: { c: string[]; t: string[]; p: string[]; d: unknown[][
     return {
       key,
       name: city.city,
+      nameAscii: city.city_ascii.toLowerCase(),
       gmtLabel: formatGmtLabel(offset),
       offset,
       timezone: city.timezone,
@@ -160,6 +176,7 @@ function buildLookup(raw: { c: string[]; t: string[]; p: string[]; d: unknown[][
       stateAnsi: city.state_ansi || undefined,
       lat: city.lat,
       lng: city.lng,
+      rank: idx,
     };
   });
 
@@ -236,8 +253,8 @@ export function searchCities(query: string, limit = 50): TimezoneOption[] {
   const state = currentState();
   if (!state) return [];
   const cities = state.all;
-  const q = query.toLowerCase().trim();
-  if (!q) {
+  const rawQuery = query.trim();
+  if (!rawQuery) {
     // Empty query: show the curated featured list (top 20 metro-pop, balanced by region).
     // Defensively drop any keys that don't resolve, so a stale entry can't break the dropdown.
     const featured = FEATURED_CITY_KEYS
@@ -246,13 +263,44 @@ export function searchCities(query: string, limit = 50): TimezoneOption[] {
     return featured.slice(0, limit);
   }
 
-  return cities.filter(
-    (city) =>
-      city.name.toLowerCase().includes(q) ||
-      city.country.toLowerCase().includes(q) ||
-      city.gmtLabel.toLowerCase().includes(q) ||
-      (city.province && city.province.toLowerCase().includes(q))
-  ).slice(0, limit);
+  // Fold query for diacritic-insensitive matching. `nameAscii` is already folded
+  // at build time; country/province are folded on the fly (only evaluated when
+  // the name didn't match, bounding the cost).
+  const q = fold(rawQuery);
+
+  // Score each city; higher score = stronger match. Tiebreak by population rank
+  // ascending so the most-populous match wins (e.g. SF California over SF Philippines).
+  //   4 — exact name match
+  //   3 — name starts with query
+  //   2 — name contains query (substring)
+  //   1 — country / province / GMT label contains query
+  const scored: { city: TimezoneOption; score: number }[] = [];
+  for (const city of cities) {
+    let score = 0;
+    const name = city.nameAscii;
+    if (name === q) {
+      score = 4;
+    } else if (name.startsWith(q)) {
+      score = 3;
+    } else if (name.includes(q)) {
+      score = 2;
+    } else {
+      const country = fold(city.country);
+      const province = city.province ? fold(city.province) : "";
+      const gmt = city.gmtLabel.toLowerCase();
+      if (country.includes(q) || province.includes(q) || gmt.includes(q)) {
+        score = 1;
+      }
+    }
+    if (score > 0) scored.push({ city, score });
+  }
+
+  scored.sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
+    return a.city.rank - b.city.rank;
+  });
+
+  return scored.slice(0, limit).map((r) => r.city);
 }
 
 export function getTimeInCityZone(baseTime: Date, offset: number): Date {

@@ -4,7 +4,7 @@ import { Link } from "wouter";
  *  Copyright line + About/Privacy/Support nav. Per Figma 272:4560. */
 export function SiteFooter() {
   return (
-    <footer className="px-6 md:px-12 lg:px-24 py-[20px]">
+    <footer className="px-6 md:px-12 lg:px-24 pt-[220px] pb-[120px]">
       <div className="mx-auto max-w-4xl px-[10px]">
         <p className="text-[12px] leading-[22px] tracking-[-0.43px] text-foreground capitalize">
           <span className="font-medium">©2026 </span>

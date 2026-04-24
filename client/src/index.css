@@ -263,3 +263,13 @@
     background-color: #222;
   }
 }
+
+/* Silktide's floating cookie icon is replaced by explicit re-entry points
+   (footer link + Privacy page button) per the 2026-04-24 spec. Silktide has
+   no config flag for this; hide it via CSS. Selector matches origin's
+   existing `#stcm-wrapper #stcm-icon` specificity (0,2,0) and uses
+   `!important` to beat the inline `style.display = 'flex'` set by Silktide JS
+   when it auto-shows the icon. */
+#stcm-wrapper #stcm-icon {
+  display: none !important;
+}

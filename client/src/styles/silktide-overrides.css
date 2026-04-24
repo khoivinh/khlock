@@ -221,8 +221,11 @@ html.happy #stcm-wrapper {
 }
 
 /* ------------------------------------------------------------------
-   Post-consent nudge icon (#stcm-icon) — small circular cookie at
-   bottom-left. Silktide's defaults are 60x60; Figma shows ~32x32.
+   Post-consent nudge icon (#stcm-icon) — historically shown after the
+   user dismisses the banner. As of 2026-04-24 this is HIDDEN site-wide
+   per the new spec; the rules below are kept only as fallback styling
+   in case the hide rule is ever lifted. The hide is enforced in
+   `client/src/index.css` with `#stcm-icon { display: none !important }`.
    ------------------------------------------------------------------ */
 #stcm-wrapper #stcm-icon {
   width: 32px;
@@ -238,4 +241,207 @@ html.happy #stcm-wrapper {
   width: 18px;
   height: 18px;
   fill: var(--iconBackgroundColor);
+}
+
+/* ==================================================================
+   PREFERENCES MODAL — Figma 296:3854 (added 2026-04-24)
+   ==================================================================
+   The preferences modal uses a single dark/yellow palette regardless
+   of app theme (Figma spec is one design, not per-mode). Color tokens
+   are scoped to #stcm-modal so they don't override the banner's themed
+   tokens above.
+   Figma specified Libre Franklin for section labels and body copy;
+   substituted with Inter (project standard — see memory:
+   feedback_fonts_inter_substitution).
+   ================================================================== */
+
+#stcm-modal {
+  --backgroundColor: #151d27;
+  --textColor: #ffffff;
+  --primaryColor: #ffd900;
+  --fontFamily: 'Inter', sans-serif;
+
+  width: min(600px, calc(100vw - 32px));
+  max-width: 600px;
+  padding: 28px 30px 30px;
+  border-radius: 10px;
+}
+
+/* Header — title + close X */
+#stcm-modal header {
+  margin-bottom: 15px;
+  align-items: flex-start;
+}
+
+#stcm-modal h1 {
+  font-family: var(--fontFamily);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--textColor);
+}
+
+/* Yellow X icon top-right — override Silktide's default padding + fill */
+#stcm-modal .stcm-modal-close {
+  background: transparent;
+  padding: 4px;
+  color: var(--primaryColor);
+}
+
+#stcm-modal .stcm-modal-close svg {
+  fill: var(--primaryColor);
+}
+
+/* Body — description + fieldsets */
+#stcm-modal section {
+  margin-top: 10px;
+}
+
+/* Description paragraph: Figma specifies Inter Regular 14/20, full opacity. */
+#stcm-modal p {
+  font-family: var(--fontFamily);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--textColor);
+  opacity: 1;
+  margin: 0 0 15px;
+}
+
+#stcm-modal fieldset {
+  margin: 0 0 15px;
+}
+
+#stcm-modal fieldset:last-of-type {
+  margin-bottom: 30px;
+}
+
+/* Section label ("Necessary" / "Analytics") — Inter Bold 14/20. */
+#stcm-modal legend {
+  font-family: var(--fontFamily);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--textColor);
+  margin: 0 0 5px;
+}
+
+#stcm-modal .stcm-consent-row {
+  gap: 16px;
+  align-items: center;
+}
+
+#stcm-modal .stcm-consent-row p,
+#stcm-modal .stcm-consent-description {
+  font-family: var(--fontFamily);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--textColor);
+  opacity: 1;
+  margin: 0;
+}
+
+/* Toggle switches — scaled to 33×18 per Figma (Silktide default 74×34). */
+#stcm-modal .stcm-toggle {
+  height: 18px;
+  width: 33px;
+}
+
+#stcm-modal .stcm-toggle-track {
+  height: 18px;
+  width: 33px;
+  background: #4a5563;
+  border-radius: 9999px;
+}
+
+#stcm-modal .stcm-toggle-thumb {
+  top: 2px;
+  left: 2px;
+  height: 14px;
+  width: 14px;
+  background: #ffffff;
+  border-radius: 50%;
+}
+
+/* Hide OFF/ON text labels — Figma toggle is a clean pill. */
+#stcm-modal .stcm-toggle-off,
+#stcm-modal .stcm-toggle-on {
+  display: none;
+}
+
+#stcm-modal .stcm-toggle input:checked + .stcm-toggle-track {
+  background: #22c55e;
+}
+
+#stcm-modal .stcm-toggle input:checked ~ .stcm-toggle-thumb {
+  left: calc(100% - 16px);
+}
+
+#stcm-modal .stcm-toggle:focus-within {
+  box-shadow: 0 0 0 2px var(--backgroundColor), 0 0 0 4px var(--primaryColor);
+  border-radius: 9999px;
+}
+
+/* Action buttons (Accept All / Essential Only / Save) */
+#stcm-wrapper #stcm-modal .stcm-button,
+#stcm-wrapper #stcm-modal .stcm-button-primary,
+#stcm-wrapper #stcm-modal .stcm-button-secondary {
+  background-color: var(--primaryColor);
+  color: #333333;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px 10px;
+  font-family: var(--fontFamily);
+  font-weight: 700;
+  font-size: 10px;
+  line-height: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+#stcm-wrapper #stcm-modal .stcm-button:hover,
+#stcm-wrapper #stcm-modal .stcm-button-primary:hover,
+#stcm-wrapper #stcm-modal .stcm-button-secondary:hover {
+  background-color: var(--primaryColor);
+  color: #333333;
+  opacity: 0.9;
+}
+
+/* Footer — Silktide attribution */
+#stcm-modal footer {
+  margin-top: 0;
+  gap: 16px;
+  align-items: center;
+}
+
+#stcm-modal footer a,
+#stcm-modal footer a.stcm-credit-link {
+  color: var(--primaryColor);
+  font-family: var(--fontFamily);
+  font-size: 12px;
+  line-height: normal;
+  text-decoration: none;
+}
+
+#stcm-modal footer a svg,
+#stcm-modal footer a.stcm-credit-link svg {
+  fill: var(--primaryColor);
+}
+
+/* Responsive — tighten padding + stack the footer attribution row */
+@media (max-width: 480px) {
+  #stcm-modal {
+    padding: 24px 20px;
+  }
+
+  #stcm-modal footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #stcm-modal footer a,
+  #stcm-modal footer a.stcm-credit-link {
+    margin-left: 0;
+    text-align: right;
+  }
 }

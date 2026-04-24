@@ -1,7 +1,8 @@
 import { Link } from "wouter";
+import { openCookiePreferences } from "@/lib/cookie-consent";
 
 /** Universal footer shown on the home page and all content pages.
- *  Copyright line + About/Privacy/Support nav. Per Figma 272:4560. */
+ *  Copyright line + About/Privacy/Cookie Preferences/Support nav. Per Figma 272:4560. */
 export function SiteFooter() {
   return (
     <footer className="px-6 md:px-12 lg:px-24 pt-[220px] pb-[120px]">
@@ -21,6 +22,14 @@ export function SiteFooter() {
           <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
           <span aria-hidden="true">•</span>
           <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+          <span aria-hidden="true">•</span>
+          <button
+            type="button"
+            onClick={openCookiePreferences}
+            className="hover:text-foreground transition-colors bg-transparent border-0 p-0 cursor-pointer font-inherit text-inherit leading-inherit"
+          >
+            Cookie Preferences
+          </button>
           <span aria-hidden="true">•</span>
           <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
         </nav>
